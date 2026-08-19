@@ -100,7 +100,10 @@ const Map2D = {
 
   resize() {
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
-    this.w = this.cv.clientWidth; this.h = this.cv.clientHeight;
+    // un onglet encore sans mise en page donne des dimensions nulles :
+    // on garde un minimum pour ne jamais manipuler de canevas vide
+    this.w = Math.max(1, this.cv.clientWidth);
+    this.h = Math.max(1, this.cv.clientHeight);
     this.cv.width = Math.round(this.w * this.dpr);
     this.cv.height = Math.round(this.h * this.dpr);
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
@@ -167,6 +170,8 @@ const Map2D = {
   /* ================================ dessin =============================== */
   draw(dt) {
     const ctx = this.ctx, s = G.s;
+    if (this.cv.clientWidth > 0 && this.cv.clientWidth !== this.w) this.resize();
+    if (this.w < 2 || this.h < 2 || this.cv.width < 2) return;   // pas encore de place à l'écran
     this.time += dt;
     this.ease(dt);
     this.clampCam();
@@ -304,8 +309,8 @@ const Map2D = {
     if (this.landKey !== key) {
       if (!this.landLayer) this.landLayer = document.createElement('canvas');
       if (this.landLayer.width !== this.cv.width || this.landLayer.height !== this.cv.height) {
-        this.landLayer.width = this.cv.width;
-        this.landLayer.height = this.cv.height;
+        this.landLayer.width = Math.max(1, this.cv.width);
+        this.landLayer.height = Math.max(1, this.cv.height);
       }
       const lc = this.landLayer.getContext('2d');
       lc.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
