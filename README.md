@@ -4,6 +4,8 @@ Jeu de gestion 2D en temps réel : vous dirigez une compagnie aérienne mondiale
 avions à la première place du classement. Tout tient dans une page web, sans dépendance
 ni installation.
 
+<sub>Réalisé par une IA (Claude), à partir des choix de conception de l'auteur.</sub>
+
 ![Le réseau mondial en vue de jour](docs/carte-jour.jpg)
 
 ## Jouer
