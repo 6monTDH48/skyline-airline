@@ -1,0 +1,7 @@
+# outils de développement locaux
+.claude/
+
+# fichiers système
+Thumbs.db
+desktop.ini
+.DS_Store
