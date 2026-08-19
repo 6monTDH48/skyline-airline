@@ -81,6 +81,9 @@ const Map2D = {
   camT: {x: 10, y: 22, z: 4},
   hoverCity: null, selCity: null, linkFrom: null, selRoute: null, hoverRoute: null,
   time: 0, grain: null, traffic: {}, trafficAt: -1,
+  /* marge du calque de fond, en pixels CSS de chaque côté */
+  BG_PAD: 180,
+  bgLayer: null, bgCam: null, bgKey: '', camPrev: null, camMoving: false,
   labelBoxes: [],
 
   /* réglages d'affichage, conservés d'une partie à l'autre */
@@ -254,7 +257,7 @@ const Map2D = {
     const before = this.worldBox();
     const ratio = this.cam.z * before.x;
     this.opts.proj = id;
-    this.layers = null; this.landKey = '';
+    this.layers = null; this.bgKey = ''; this.gcWorld.clear();
     const after = this.worldBox();
     this.cam.z = this.camT.z = ratio / after.x;
     const p = this.P().fwd(centre[0], centre[1]);
@@ -335,11 +338,13 @@ const Map2D = {
     this.time += dt;
     this.ease(dt);
     this.clampCam();
+    const pv = this.camPrev;
+    this.camMoving = !pv || pv.x !== this.cam.x || pv.y !== this.cam.y || pv.z !== this.cam.z;
+    this.camPrev = {x: this.cam.x, y: this.cam.y, z: this.cam.z};
     this.refreshTraffic();
 
     this.drawSea();
-    this.drawGraticule();
-    this.drawLand();
+    this.drawBackground();
     if (this.opts.night) this.drawNight();
     if (s) {
       if (this.opts.rivals) this.drawRivalRoutes();
@@ -421,13 +426,6 @@ const Map2D = {
       ctx.stroke();
     });
 
-    ctx.fillStyle = P.gratTxt;
-    for (let lat = -60; lat <= 80; lat += step * (z > 7 ? 1 : 2)) {
-      const p = this.px(this.geo(6, this.h / 2)[0], lat);
-      if (p[1] < 66 || p[1] > this.h - 26) continue;
-      ctx.fillText(Math.abs(lat) + '°' + (lat === 0 ? '' : (lat > 0 ? 'N' : 'S')), 4, p[1] + 2);
-    }
-
     ctx.setLineDash([5, 6]);
     [[0, P.equator], [23.44, P.tropic], [-23.44, P.tropic]].forEach(([lat, col]) => {
       ctx.strokeStyle = col;
@@ -444,28 +442,77 @@ const Map2D = {
     ctx.setLineDash([]);
   },
 
-  /* ------------------------------ fond de carte -------------------------- */
-  drawLand() {
-    const key = this.cam.x.toFixed(3) + '|' + this.cam.y.toFixed(3) + '|' +
-                this.cam.z.toFixed(4) + '|' + this.cv.width + 'x' + this.cv.height +
-                '|' + this.opts.proj + '|' + (this.opts.dark ? 'nuit' : 'jour') +
-                '|' + (this.opts.borders ? 'f' : '') + (this.opts.lakes ? 'l' : '');
-    if (this.landKey !== key) {
-      if (!this.landLayer) this.landLayer = document.createElement('canvas');
-      if (this.landLayer.width !== this.cv.width || this.landLayer.height !== this.cv.height) {
-        this.landLayer.width = Math.max(1, this.cv.width);
-        this.landLayer.height = Math.max(1, this.cv.height);
-      }
-      const lc = this.landLayer.getContext('2d');
-      lc.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-      lc.clearRect(0, 0, this.w, this.h);
-      const keep = this.ctx;
-      this.ctx = lc;
-      this.paintLand();
-      this.ctx = keep;
-      this.landKey = key;
+  /* étiquettes de latitude : elles suivent le bord de l'écran, donc elles sont
+     peintes en direct et non dans le calque de fond */
+  drawGratLabels() {
+    const ctx = this.ctx, P = this.pal(), z = this.cam.z;
+    const step = z > 14 ? 5 : (z > 7 ? 10 : 20);
+    ctx.font = '9px "Segoe UI",system-ui,sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = P.gratTxt;
+    for (let lat = -60; lat <= 80; lat += step * (z > 7 ? 1 : 2)) {
+      const p = this.px(this.geo(6, this.h / 2)[0], lat);
+      if (p[1] < 66 || p[1] > this.h - 26) continue;
+      ctx.fillText(Math.abs(lat) + '°' + (lat === 0 ? '' : (lat > 0 ? 'N' : 'S')), 4, p[1] + 2);
     }
-    this.ctx.drawImage(this.landLayer, 0, 0, this.w, this.h);
+  },
+
+  /* ------------------------------ fond de carte -------------------------- */
+  /* Le graticule et les terres ne dépendent que de la caméra : on les peint
+     dans un calque hors écran plus grand que la vue (marge BG_PAD tout autour).
+     Tant que le déplacement reste dans cette marge, il suffit de recoller
+     l'image décalée ; le fond n'est repeint qu'aux débordements et au repos. */
+  bgStateKey() {
+    return this.opts.proj + '|' + (this.opts.dark ? 'nuit' : 'jour') +
+           '|' + (this.opts.borders ? 'f' : '') + (this.opts.lakes ? 'l' : '') +
+           '|' + Math.round(this.w) + 'x' + Math.round(this.h) + '@' + this.dpr;
+  },
+
+  /* placement du calque à l'écran ; null s'il ne couvre plus la vue */
+  bgFit() {
+    const b = this.bgCam, z = this.cam.z;
+    const W2 = this.w + 2 * this.BG_PAD, H2 = this.h + 2 * this.BG_PAD;
+    const s = z / b.z;
+    const dx = (b.x - this.cam.x) * z + this.w / 2 - s * W2 / 2;
+    const dy = (this.cam.y - b.y) * z + this.h / 2 + 20 - s * (H2 / 2 + 20);
+    if (dx > 0.5 || dy > 0.5 ||
+        dx + s * W2 < this.w - 0.5 || dy + s * H2 < this.h - 0.5) return null;
+    // nette seulement si l'image retombe pile à sa place d'origine
+    const sharp = s === 1 && Math.abs(dx + this.BG_PAD) < 0.01 && Math.abs(dy + this.BG_PAD) < 0.01;
+    return {dx, dy, dw: s * W2, dh: s * H2, sharp};
+  },
+
+  paintBackground() {
+    const W2 = this.w + 2 * this.BG_PAD, H2 = this.h + 2 * this.BG_PAD;
+    if (!this.bgLayer) this.bgLayer = document.createElement('canvas');
+    const pw = Math.round(W2 * this.dpr), ph = Math.round(H2 * this.dpr);
+    if (this.bgLayer.width !== pw || this.bgLayer.height !== ph) {
+      this.bgLayer.width = pw; this.bgLayer.height = ph;
+    }
+    const bc = this.bgLayer.getContext('2d');
+    bc.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    bc.clearRect(0, 0, W2, H2);
+    const keep = this.ctx, kw = this.w, kh = this.h;
+    this.ctx = bc; this.w = W2; this.h = H2;      // la vue élargie devient l'écran
+    this.drawGraticule();
+    this.paintLand();
+    this.ctx = keep; this.w = kw; this.h = kh;
+    this.bgCam = {x: this.cam.x, y: this.cam.y, z: this.cam.z};
+    this.bgKey = this.bgStateKey();
+  },
+
+  drawBackground() {
+    const key = this.bgStateKey();
+    let fit = (this.bgLayer && this.bgCam && this.bgKey === key) ? this.bgFit() : null;
+    // au repos, on repeint une fois pour retrouver un fond parfaitement net
+    if (fit && !fit.sharp && !this.camMoving) fit = null;
+    if (!fit) {
+      this.paintBackground();
+      fit = this.bgFit() ||
+            {dx: -this.BG_PAD, dy: -this.BG_PAD, dw: this.w + 2 * this.BG_PAD, dh: this.h + 2 * this.BG_PAD};
+    }
+    this.ctx.drawImage(this.bgLayer, fit.dx, fit.dy, fit.dw, fit.dh);
+    this.drawGratLabels();
   },
 
   /* trace les anneaux visibles d'une couche, en un chemin borné */
@@ -650,8 +697,45 @@ const Map2D = {
         v.push(lon, lat);
       }
     }
+    v.key = key;
     this.gcCache.set(key, v);
     return v;
+  },
+
+  /* Version projetée en unités monde, découpée aux bords de carte, gardée en
+     cache par projection : reprojeter des centaines de lignes à chaque image
+     coûtait bien plus cher que de les tracer. */
+  gcWorld: new Map(),
+  gcw(pts) {
+    const k = pts.key + '|' + this.opts.proj;
+    let v = this.gcWorld.get(k);
+    if (v) return v;
+    const P = this.P();
+    const segs = this.pieces(pts, 0).map(seg => {
+      const f = new Float32Array(seg.length);
+      for (let i = 0; i < seg.length; i += 2) {
+        const q = P.fwd(seg[i], seg[i + 1]);
+        f[i] = q[0]; f[i + 1] = q[1];
+      }
+      return f;
+    });
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    segs.forEach(f => {
+      for (let i = 0; i < f.length; i += 2) {
+        if (f[i] < x0) x0 = f[i];
+        if (f[i] > x1) x1 = f[i];
+        if (f[i+1] < y0) y0 = f[i+1];
+        if (f[i+1] > y1) y1 = f[i+1];
+      }
+    });
+    v = {segs, bb: [x0, y0, x1, y1]};
+    this.gcWorld.set(k, v);
+    return v;
+  },
+
+  /* décalage d'une tuile, en unités monde */
+  tileOff(off) {
+    return off ? this.P().fwd(off, 0)[0] - this.P().fwd(0, 0)[0] : 0;
   },
 
   /* Sur une projection non répétée, une trajectoire qui franchit
@@ -677,30 +761,24 @@ const Map2D = {
   },
 
   gcVisible(pts, off) {
-    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
-    for (let i = 0; i < pts.length; i += 2) {
-      const p = this.px(pts[i] + off, pts[i + 1]);
-      if (p[0] < x0) x0 = p[0];
-      if (p[0] > x1) x1 = p[0];
-      if (p[1] < y0) y0 = p[1];
-      if (p[1] > y1) y1 = p[1];
-    }
-    return !(x1 < -90 || x0 > this.w + 90 || y1 < -90 || y0 > this.h + 90);
+    const b = this.gcw(pts).bb, z = this.cam.z, ox = this.tileOff(off), m = 90 / z;
+    const vx0 = this.cam.x - ox - (this.w / 2) / z - m;
+    const vx1 = this.cam.x - ox + (this.w / 2) / z + m;
+    const vy0 = this.cam.y - (this.h / 2 - 20) / z - m;
+    const vy1 = this.cam.y + (this.h / 2 + 20) / z + m;
+    return !(b[0] > vx1 || b[2] < vx0 || b[1] > vy1 || b[3] < vy0);
   },
 
   strokeGC(pts, off, wid, color, dash, dashOff) {
-    const ctx = this.ctx;
+    const ctx = this.ctx, z = this.cam.z;
+    const tx = (this.tileOff(off) - this.cam.x) * z + this.w / 2;
+    const ty = this.cam.y * z + this.h / 2 + 20;
     ctx.strokeStyle = color; ctx.lineWidth = wid; ctx.lineCap = 'round';
     if (dash) { ctx.setLineDash(dash); ctx.lineDashOffset = dashOff || 0; }
-    this.pieces(pts, this.P().tile ? off : off).forEach(seg => {
+    this.gcw(pts).segs.forEach(f => {
       ctx.beginPath();
-      const shift = this.P().tile ? off : 0;
-      let p = this.px(seg[0] + shift, seg[1]);
-      ctx.moveTo(p[0], p[1]);
-      for (let i = 2; i < seg.length; i += 2) {
-        p = this.px(seg[i] + shift, seg[i + 1]);
-        ctx.lineTo(p[0], p[1]);
-      }
+      ctx.moveTo(f[0] * z + tx, ty - f[1] * z);
+      for (let i = 2; i < f.length; i += 2) ctx.lineTo(f[i] * z + tx, ty - f[i+1] * z);
       ctx.stroke();
     });
     if (dash) { ctx.setLineDash([]); ctx.lineDashOffset = 0; }
@@ -842,44 +920,65 @@ const Map2D = {
     });
     vis.sort((a, b) => b.prio - a.prio);
 
-    // 2. halos et pastilles
-    vis.forEach(v => {
-      const {c, p, isHub, owned, hov, sel, traf} = v;
-      const rad = v.rad = 2.4 + c.size * 4.2 + (isHub ? 1.8 : 0);
-      if (traf > 0 && this.opts.halos) {
-        const rr = rad + 6 + 22 * Math.sqrt(traf / maxTraffic);
-        const g = ctx.createRadialGradient(p[0], p[1], rad * 0.5, p[0], p[1], rr);
-        g.addColorStop(0, isHub ? P.haloHub : P.halo);
+    // 2. halos, anneaux puis pastilles ; les pastilles sont regroupées par
+    //    couleur pour n'avoir que trois remplissages au lieu de cent cinquante
+    vis.forEach(v => { v.rad = 2.4 + v.c.size * 4.2 + (v.isHub ? 1.8 : 0); });
+
+    if (this.opts.halos) {
+      vis.forEach(v => {
+        if (!v.traf) return;
+        const p = v.p, rr = v.rad + 6 + 22 * Math.sqrt(v.traf / maxTraffic);
+        const g = ctx.createRadialGradient(p[0], p[1], v.rad * 0.5, p[0], p[1], rr);
+        g.addColorStop(0, v.isHub ? P.haloHub : P.halo);
         g.addColorStop(1, P.haloOut);
         ctx.fillStyle = g;
         ctx.beginPath(); ctx.arc(p[0], p[1], rr, 0, 7); ctx.fill();
-      }
-      if (sel || hov) {
-        const pr = rad + 8 + (hov ? 2 * Math.sin(this.time * 5) : 0);
-        ctx.beginPath(); ctx.arc(p[0], p[1], pr, 0, 7);
-        ctx.strokeStyle = sel ? P.ringSel : P.ringHov;
-        ctx.lineWidth = 1.6; ctx.stroke();
-      }
-      if (isHub) {
-        ctx.save();
-        ctx.translate(p[0], p[1]); ctx.rotate(this.time * 0.35);
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath(); ctx.arc(0, 0, rad + 5.5, 0, 7);
-        ctx.strokeStyle = P.ringHub; ctx.lineWidth = 1.7; ctx.stroke();
-        ctx.restore();
-      }
+      });
+    }
+
+    ctx.lineWidth = 1.6;
+    vis.forEach(v => {
+      if (!(v.sel || v.hov)) return;
+      const pr = v.rad + 8 + (v.hov ? 2 * Math.sin(this.time * 5) : 0);
+      ctx.beginPath(); ctx.arc(v.p[0], v.p[1], pr, 0, 7);
+      ctx.strokeStyle = v.sel ? P.ringSel : P.ringHov;
+      ctx.stroke();
+    });
+
+    const spin = this.time * 0.35;
+    vis.forEach(v => {
+      if (!v.isHub) return;
+      ctx.save();
+      ctx.translate(v.p[0], v.p[1]); ctx.rotate(spin);
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.arc(0, 0, v.rad + 5.5, 0, 7);
+      ctx.strokeStyle = P.ringHub; ctx.lineWidth = 1.7; ctx.stroke();
+      ctx.restore();
+    });
+
+    const groups = [[P.dot, v => !v.isHub && !v.owned],
+                    [P.dotOwn, v => !v.isHub && v.owned],
+                    [P.dotHub, v => v.isHub]];
+    groups.forEach(([col, keep]) => {
+      const list = vis.filter(keep);
+      if (!list.length) return;
+      ctx.beginPath();
+      list.forEach(v => { ctx.moveTo(v.p[0] + v.rad, v.p[1]); ctx.arc(v.p[0], v.p[1], v.rad, 0, 7); });
       ctx.save();
       ctx.shadowColor = P.dotShadow; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
-      ctx.beginPath(); ctx.arc(p[0], p[1], rad, 0, 7);
-      ctx.fillStyle = isHub ? P.dotHub : (owned ? P.dotOwn : P.dot);
-      ctx.fill();
+      ctx.fillStyle = col; ctx.fill();
       ctx.restore();
       ctx.strokeStyle = P.dotEdge; ctx.lineWidth = 1.4; ctx.stroke();
-      if (isHub) {
-        ctx.beginPath(); ctx.arc(p[0] - rad * 0.28, p[1] - rad * 0.28, rad * 0.3, 0, 7);
-        ctx.fillStyle = P.dotGloss; ctx.fill();
-      }
     });
+
+    ctx.fillStyle = P.dotGloss;
+    ctx.beginPath();
+    vis.forEach(v => {
+      if (!v.isHub) return;
+      const gx = v.p[0] - v.rad * 0.28, gy = v.p[1] - v.rad * 0.28, gr = v.rad * 0.3;
+      ctx.moveTo(gx + gr, gy); ctx.arc(gx, gy, gr, 0, 7);
+    });
+    ctx.fill();
 
     // 3. étiquettes : on place par ordre d'importance, en évitant les collisions
     if (!this.opts.labels) return;
@@ -898,7 +997,7 @@ const Map2D = {
       if (!(c.size >= minSize || hov || sel || owned)) return;
       const fs = c.size > 0.7 ? 12 : (c.size > 0.34 ? 11 : 10);
       ctx.font = (c.size > 0.7 || isHub ? '600 ' : '') + fs + 'px "Segoe UI",system-ui,sans-serif';
-      const wTxt = ctx.measureText(c.name).width, hTxt = fs + 2;
+      const wTxt = this.textW(ctx, c.name), hTxt = fs + 2;
       const r = v.rad + 5;
       // quatre positions candidates, la droite d'abord
       const cand = [
@@ -921,6 +1020,15 @@ const Map2D = {
       ctx.fillText(c.name, placed[0], placed[1]);
     });
     this.labelBoxes = boxes;
+  },
+
+  /* measureText est étonnamment coûteux : les noms ne changent pas, on retient */
+  textWCache: new Map(),
+  textW(ctx, txt) {
+    const k = ctx.font + '|' + txt;
+    let v = this.textWCache.get(k);
+    if (v === undefined) { v = ctx.measureText(txt).width; this.textWCache.set(k, v); }
+    return v;
   },
 
   drawLink() {
