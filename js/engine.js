@@ -997,6 +997,9 @@ G.routeState = function (r) {
   const turned = r.last.unmet || 0;
   if (r.last.lf >= 0.88 && turned > Math.max(10, r.last.pax * 1.5)) return 'saturee';
   if (r.last.profit < 0) return 'deficitaire';
+  // Sans demande renvoyée en masse, une ligne qui part complète reste saine,
+  // mais elle est au plafond : plus un siège à vendre. On la signale.
+  if (r.last.lf >= 0.99) return 'pleine';
   if (r.last.lf < 0.50)  return 'creuse';
   return 'normale';
 };
