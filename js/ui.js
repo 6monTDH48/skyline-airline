@@ -619,7 +619,20 @@ const UI = {
     const leader = s.rivals.every(r => r.paxDay <= mine);
     const D = G.DIFF(), goals = G.goals();
     const doneN = goals.filter(g => g.done).length;
-    let h = '<div class="card big"><div class="row"><div class="ttl">Objectif final</div>' +
+    let h = '';
+    if (D.sandbox) {
+      h += '<div class="card big"><div class="row"><div class="ttl">Mode créatif</div>' +
+        '<span class="tag ok">' + D.name + '</span></div>' +
+        '<div class="mini" style="margin-top:4px">Partie libre : la trésorerie se remplit toute ' +
+        'seule, les créneaux sont ouverts partout et il n’y a ni faillite ni victoire. ' +
+        'Les jalons ci-dessous restent là pour se repérer.</div>' +
+        '<div class="mini" style="margin-top:6px">Valeur d’entreprise ' + money(val) +
+        ' · part de marché ' + pct(share, 1) +
+        ' · ' + num(mine) + ' pax/jour' + (leader ? ' · première compagnie mondiale' : '') +
+        '</div></div>';
+      return h + this.milestones();
+    }
+    h += '<div class="card big"><div class="row"><div class="ttl">Objectif final</div>' +
       '<span class="tag ' + (doneN === goals.length ? 'ok' : '') + '">' + D.name + '</span></div>' +
       '<div class="mini" style="margin-top:4px">Les quatre conditions doivent être réunies ' +
       'en même temps. ' + doneN + ' sur ' + goals.length + ' atteinte' + (doneN > 1 ? 's' : '') + '.</div>';
@@ -633,7 +646,12 @@ const UI = {
     });
     h += '</div>';
 
-    h += '<h4 class="sec">Jalons</h4>';
+    return h + this.milestones();
+  },
+
+  milestones() {
+    const s = G.s;
+    let h = '<h4 class="sec">Jalons</h4>';
     const miles = [
       ['Ouvrir 5 lignes', s.routes.length >= 5, s.routes.length + '/5'],
       ['Posséder 10 appareils', s.fleet.length >= 10, s.fleet.length + '/10'],

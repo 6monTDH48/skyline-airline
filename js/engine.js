@@ -788,8 +788,9 @@ function simulateDay() {
 
   tickEvents();
 
-  // ---- 7. faillite ----
-  if (s.cash < 0) {
+  // ---- 7. faillite (jamais en mode créatif) ----
+  if (DIFF().sandbox) { s.cash = Math.max(s.cash, DIFF().cash); s.negDays = 0; }
+  else if (s.cash < 0) {
     s.negDays++;
     if (s.negDays === 15 || s.negDays === 35)
       pushLog('Alerte trésorerie', 'Vous êtes à découvert depuis ' + s.negDays +
@@ -997,6 +998,9 @@ G.routeState = function (r) {
   const turned = r.last.unmet || 0;
   if (r.last.lf >= 0.88 && turned > Math.max(10, r.last.pax * 1.5)) return 'saturee';
   if (r.last.profit < 0) return 'deficitaire';
+  // Sans demande renvoyée en masse, une ligne qui part complète reste saine,
+  // mais elle est au plafond : plus un siège à vendre. On la signale.
+  if (r.last.lf >= 0.99) return 'pleine';
   if (r.last.lf < 0.50)  return 'creuse';
   return 'normale';
 };
@@ -1129,6 +1133,7 @@ G.marketShare = function () {
 /* Les quatre conditions de victoire, et leur avancement. */
 G.goals = function () {
   const s = G.s, D = DIFF();
+  if (D.sandbox) return [];
   const val = G.companyValue();
   const myPax = s.routes.reduce((t, x) => t + x.last.pax, 0);
   const bestRival = s.rivals.length ? Math.max(...s.rivals.map(r => r.paxDay)) : 0;
@@ -1165,7 +1170,7 @@ G.goals = function () {
 
 function checkVictory() {
   const s = G.s;
-  if (s.won || s.dead) return;
+  if (s.won || s.dead || DIFF().sandbox) return;
   if (G.goals().every(g => g.done)) {
     s.won = true;
     G.emit('victory', {value: G.companyValue(), share: G.marketShare()});
@@ -1180,6 +1185,8 @@ G.acc = 0;
 G.step = function (dtSeconds, speed) {
   const s = G.s;
   if (!s || s.dead) return;
+  // mode créatif : la caisse est renflouée en continu, rien n'est jamais trop cher
+  if (DIFF().sandbox && s.cash < DIFF().cash) s.cash = DIFF().cash;
   // animation des avions
   const frac = dtSeconds * speed / BAL.DAY_SECONDS;
   s.fleet.forEach(ac => {
