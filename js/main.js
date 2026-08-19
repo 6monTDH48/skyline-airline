@@ -54,8 +54,9 @@ function startScreen() {
     diffBox.querySelectorAll('button').forEach(b =>
       b.classList.toggle('on', b.dataset.diff === chosen));
     const D = DIFFICULTIES[chosen];
-    diffNote.innerHTML = D.desc + '<br><b>' + money(D.cash) + '</b> au départ · objectif <b>' +
-      money(D.goal) + '</b>';
+    diffNote.innerHTML = D.desc + '<br>' + (D.sandbox
+      ? '<b>Trésorerie illimitée</b> · aucun objectif, aucune faillite'
+      : '<b>' + money(D.cash) + '</b> au départ · objectif <b>' + money(D.goal) + '</b>');
   };
   diffBox.querySelectorAll('button').forEach(b =>
     b.onclick = () => { chosen = b.dataset.diff; paintDiff(); });
@@ -80,7 +81,7 @@ function startScreen() {
 /* ================================= thème ================================= */
 function applyTheme() {
   document.documentElement.classList.toggle('dark', !!Map2D.opts.dark);
-  Map2D.landKey = '';                       // le fond de carte doit être repeint
+  Map2D.bgKey = '';                       // le fond de carte doit être repeint
 }
 
 /* ================================ vitesse ================================ */

@@ -301,7 +301,13 @@ const DIFFICULTIES = {
     desc:'Départ à l’étroit, créneaux rares et chers, concurrents qui cassent les prix ' +
          'sur vos meilleures lignes. Dix milliards d’euros, la première place mondiale, ' +
          'un réseau sur tous les continents et des comptes durablement dans le vert.'
+  },
+  creatif: {
+    id:'creatif', name:'Créatif', sandbox:true, cash:5e9,
+    slotPrice:1.0, slotCap:1.00, aggro:0.5, repGate:0, goal:5e9, profitYears:1, minRep:0,
+    desc:'Bac à sable : trésorerie inépuisable, créneaux ouverts partout, ' +
+         'aucune faillite et aucun objectif. Pour essayer librement toutes les fonctions du jeu.'
   }
 };
-const DIFF_ORDER = ['facile', 'normal', 'difficile'];
+const DIFF_ORDER = ['facile', 'normal', 'difficile', 'creatif'];
 const REGION_ALL = ['EU', 'ME', 'AF', 'AS', 'OC', 'NA', 'SA'];

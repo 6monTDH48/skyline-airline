@@ -33,7 +33,7 @@ ou au Moyen-Orient. La quatrième interdit de gagner en brûlant la caisse.
 
 ## Difficulté
 
-Trois niveaux, choisis au démarrage à côté de la base :
+Trois niveaux de partie, plus un mode créatif, choisis au démarrage à côté de la base :
 
 | | Facile | Normal | Difficile |
 |---|---|---|---|
@@ -48,6 +48,11 @@ En normal et en difficile, les grandes plateformes n'accordent leurs créneaux q
 compagnies d'une certaine réputation : Heathrow et JFK se méritent. Votre base d'attache
 fait exception. Les concurrents, eux, cassent les prix et montent en fréquence sur les
 lignes où vous prenez l'ascendant.
+
+Le **mode créatif** est un bac à sable : la trésorerie se remplit toute seule, les créneaux
+sont ouverts partout sans condition de réputation, il n'y a ni faillite ni victoire. C'est
+le mode à choisir pour essayer librement les appareils, les hubs, les programmes et les
+tarifs sans surveiller les comptes.
 
 ## Prise en main
 
