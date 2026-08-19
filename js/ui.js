@@ -134,6 +134,17 @@ const UI = {
 
     h += this.airportBlock(code);
 
+    const needRep = G.slotMinRep(code);
+    if (needRep) {
+      const ok = s.rep >= needRep;
+      h += '<div class="mini flag ' + (ok ? 'warn' : 'bad') + '" style="margin:10px 0 0">' +
+        (ok ? 'Cet aéroport n’accorde ses créneaux qu’au-dessus de <b>' + needRep +
+              '</b> de réputation. La vôtre suffit (' + Math.round(s.rep) + ').'
+            : 'Cet aéroport réserve ses créneaux aux compagnies de réputation <b>' + needRep +
+              '</b> ou plus. La vôtre est de <b>' + Math.round(s.rep) + '</b> : soignez vos ' +
+              'cabines, vos hubs et votre ponctualité avant de revenir.') + '</div>';
+    }
+
     h += '<h4 class="sec">Créneaux aéroportuaires</h4>';
     h += '<div class="card">' +
          '<div class="mini">Un créneau est nécessaire par appareil et par escale. ' +
@@ -606,15 +617,21 @@ const UI = {
     const val = G.companyValue(), share = G.marketShare();
     const mine = s.routes.reduce((t, r) => t + r.last.pax, 0);
     const leader = s.rivals.every(r => r.paxDay <= mine);
-    let h = '<div class="card big"><div class="ttl">Objectif final</div>' +
-      '<div class="mini" style="margin-top:4px">Atteindre <b>1 Md€</b> de valeur d’entreprise <i>et</i> devenir la première compagnie mondiale en trafic.</div>' +
-      '<label class="lb">Valeur — ' + money(val) + ' / 1,00 Md€</label>' +
-      '<div class="bar"><i style="width:' + Math.min(100, val / BAL.GOAL_VALUE * 100) + '%"></i></div>' +
-      '<label class="lb">Leadership mondial — ' + pct(share, 1) + ' de part de marché</label>' +
-      '<div class="bar"><i style="width:' + Math.min(100, share * 400) + '%;background:' +
-      (leader ? '#3d7a4e' : '#a67c1a') + '"></i></div>' +
-      '<div class="mini" style="margin-top:6px">' + (leader ? 'Vous êtes en tête du classement.'
-        : 'Le leader actuel transporte ' + num(Math.max(...s.rivals.map(r => r.paxDay))) + ' pax/jour.') + '</div></div>';
+    const D = G.DIFF(), goals = G.goals();
+    const doneN = goals.filter(g => g.done).length;
+    let h = '<div class="card big"><div class="row"><div class="ttl">Objectif final</div>' +
+      '<span class="tag ' + (doneN === goals.length ? 'ok' : '') + '">' + D.name + '</span></div>' +
+      '<div class="mini" style="margin-top:4px">Les quatre conditions doivent être réunies ' +
+      'en même temps. ' + doneN + ' sur ' + goals.length + ' atteinte' + (doneN > 1 ? 's' : '') + '.</div>';
+    goals.forEach(g => {
+      h += '<label class="lb" style="display:flex;align-items:center;gap:7px">' +
+        '<span class="chk' + (g.done ? ' on' : '') + '"></span>' + g.label + '</label>' +
+        '<div class="bar"><i style="width:' +
+        Math.min(100, Math.max(0, g.now / Math.max(1e-9, g.target) * 100)) + '%;background:' +
+        (g.done ? 'var(--green)' : 'var(--navy2)') + '"></i></div>' +
+        '<div class="mini" style="margin:3px 0 2px">' + g.text + '</div>';
+    });
+    h += '</div>';
 
     h += '<h4 class="sec">Jalons</h4>';
     const miles = [
@@ -674,9 +691,19 @@ const UI = {
     '<h4 class="sec">Charges passives</h4><div class="mini">Un avion coûte cher <i>même au sol</i> : salaires des équipages, ' +
     'maintenance programmée, assurance, stationnement, formation. Un appareil sans ligne perd de l’argent tous les jours. ' +
     'Le détail poste par poste, les recettes par classe et les ratios unitaires sont dans <b>Statistiques</b>.</div>' +
+    '<h4 class="sec">Gagner la partie</h4><div class="mini">Quatre conditions doivent être ' +
+    'réunies <i>en même temps</i> : la valeur d’entreprise, la première place mondiale en trafic, ' +
+    'un réseau couvrant les sept régions du monde avec trois hubs, et plusieurs exercices ' +
+    'bénéficiaires d’affilée. Le panneau <b>Objectifs</b> suit chacune d’elles et nomme les ' +
+    'régions qui vous manquent. L’Océanie ne s’atteint qu’avec un hub en Asie ou au Moyen-Orient.</div>' +
+    '<h4 class="sec">Réputation et créneaux</h4><div class="mini">En difficulté normale et ' +
+    'difficile, les grandes plateformes n’accordent leurs créneaux qu’aux compagnies d’une ' +
+    'certaine réputation — votre base fait exception. Pour monter : des cabines soignées, ' +
+    'des avions récents et révisés, des hubs, et des tarifs raisonnables.</div>' +
     '<h4 class="sec">Couleur des lignes</h4><div class="mini">Sur la carte, une ligne ' +
-    '<b style="color:#c8322a">rouge</b> est <b>saturée</b> : les avions partent pleins et vous refusez ' +
-    'des passagers, il faut ajouter un appareil ou monter le tarif. Une ligne ' +
+    '<b style="color:#c8322a">rouge</b> est <b>pleine</b> : les avions partent complets. Si elle ' +
+    'bat lentement, elle est en plus <b>saturée</b> — elle renvoie beaucoup plus de monde ' +
+    'qu’elle n’en transporte, un appareil de plus s’y paierait. Une ligne ' +
     '<b style="color:#7a5a9c">violette</b> est déficitaire, une ligne ' +
     '<b style="color:#6f9bc0">bleu pâle</b> vole trop vide. Les lignes saines restent bleu foncé. ' +
     'Le panneau Réseau reprend ces états, et survoler une ligne du tableau la met en avant sur la carte.</div>' +
@@ -770,7 +797,7 @@ const UI = {
     this.el('kShare').textContent = pct(G.marketShare(), 1);
     const v = G.companyValue();
     this.el('kValue').textContent = money(v);
-    this.el('bValue').style.width = Math.min(100, v / BAL.GOAL_VALUE * 100) + '%';
+    this.el('bValue').style.width = Math.min(100, v / G.DIFF().goal * 100) + '%';
     const hh = Math.floor(Math.max(0, Math.min(0.999, G.acc)) * 24);
     this.el('date').innerHTML = s.d + ' ' + MONTHS[s.m] + ' ' + s.y +
       ' <span class="hh">' + (hh < 10 ? '0' : '') + hh + ' h</span>';

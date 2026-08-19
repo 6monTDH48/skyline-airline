@@ -29,12 +29,18 @@ function startScreen() {
 
   UI.modal(
     '<div class="mh"><h2>Skyline</h2><p>Vous prenez la tête d’une jeune compagnie aérienne. ' +
-    '150 M€ en caisse, deux A320 et le monde entier à relier. Objectif : 1 milliard € de valeur ' +
-    'et la première place mondiale.</p></div><div class="mb">' +
+    'Deux A320, 151 aéroports dans le monde, et cinq concurrents déjà installés. ' +
+    'Il faudra de la valeur, du trafic, un réseau sur tous les continents et des comptes ' +
+    'durablement dans le vert.</p></div><div class="mb">' +
     '<label class="lb">Nom de votre compagnie</label>' +
     '<input type="text" id="inName" maxlength="24" value="Skyline Airways">' +
     '<label class="lb">Base principale (elle devient votre premier hub)</label>' +
     '<select id="inHome">' + opts + '</select>' +
+    '<label class="lb">Difficulté</label>' +
+    '<div class="diffs" id="inDiff">' + DIFF_ORDER.map((id, i) =>
+      '<button data-diff="' + id + '"' + (id === 'normal' ? ' class="on"' : '') + '>' +
+      DIFFICULTIES[id].name + '</button>').join('') + '</div>' +
+    '<div class="mini" id="diffNote" style="margin-top:6px;min-height:44px"></div>' +
     '<div class="mini" style="margin-top:10px">La difficulté indiquée dépend de la demande accessible ' +
     'autour de la base. Rien ne vous empêche ensuite d’acheter des créneaux à l’autre bout du monde : ' +
     'le choix de départ change le début de partie, pas le plafond.</div>' +
@@ -42,10 +48,23 @@ function startScreen() {
       '<div class="mini">Charge votre dernière sauvegarde locale.</div></button>' : '') +
     '</div><div class="mf"><button class="btn" id="btnStart">Décoller</button></div>');
 
+  let chosen = 'normal';
+  const diffBox = document.getElementById('inDiff'), diffNote = document.getElementById('diffNote');
+  const paintDiff = () => {
+    diffBox.querySelectorAll('button').forEach(b =>
+      b.classList.toggle('on', b.dataset.diff === chosen));
+    const D = DIFFICULTIES[chosen];
+    diffNote.innerHTML = D.desc + '<br><b>' + money(D.cash) + '</b> au départ · objectif <b>' +
+      money(D.goal) + '</b>';
+  };
+  diffBox.querySelectorAll('button').forEach(b =>
+    b.onclick = () => { chosen = b.dataset.diff; paintDiff(); });
+  paintDiff();
+
   document.getElementById('btnStart').onclick = () => {
     const name = document.getElementById('inName').value.trim() || 'Skyline Airways';
     const home = document.getElementById('inHome').value;
-    G.newGame(name, home);
+    G.newGame(name, home, chosen);
     UI.closeModal();
     Map2D.focus(home, 7);
     UI.topbar(); UI.open('help');
@@ -118,8 +137,8 @@ function initInput() {
     if (down) {
       const dx = e.clientX - lx, dy = e.clientY - ly;
       moved += Math.abs(dx) + Math.abs(dy);
-      Map2D.cam.lon -= dx / Map2D.cam.z;
-      Map2D.cam.lat += dy / Map2D.cam.z;
+      Map2D.cam.x -= dx / Map2D.cam.z;
+      Map2D.cam.y += dy / Map2D.cam.z;
       Map2D.syncTarget();
       lx = e.clientX; ly = e.clientY;
     } else {
@@ -130,12 +149,12 @@ function initInput() {
     e.preventDefault();
     const r = cv.getBoundingClientRect();
     const mx = e.clientX - r.left, my = e.clientY - r.top;
-    const before = Map2D.geo(mx, my);
+    const before = Map2D.world(mx, my);
     Map2D.cam.z *= e.deltaY < 0 ? 1.18 : 1 / 1.18;
     Map2D.clampCam();
-    const after = Map2D.geo(mx, my);
-    Map2D.cam.lon += before[0] - after[0];
-    Map2D.cam.lat += before[1] - after[1];
+    const after = Map2D.world(mx, my);
+    Map2D.cam.x += before[0] - after[0];
+    Map2D.cam.y += before[1] - after[1];
     Map2D.syncTarget();
   }, {passive:false});
 
@@ -213,6 +232,20 @@ function initInput() {
     };
   });
   applyTheme();
+  // choix de la projection
+  const projBox = document.getElementById('projs'), projNote = document.getElementById('projNote');
+  const paintProj = () => {
+    projBox.innerHTML = Object.keys(PROJECTIONS).map(id =>
+      '<button data-proj="' + id + '"' + (Map2D.opts.proj === id ? ' class="on"' : '') + '>' +
+      PROJECTIONS[id].name + '</button>').join('');
+    projNote.textContent = PROJECTIONS[Map2D.opts.proj].note;
+    projBox.querySelectorAll('button').forEach(b => b.onclick = () => {
+      Map2D.setProjection(b.dataset.proj);
+      paintProj();
+    });
+  };
+  paintProj();
+
   optBtn.onclick = () => {
     const open = optPanel.classList.toggle('open');
     optBtn.classList.toggle('on', open);

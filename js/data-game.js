@@ -7,7 +7,6 @@ const BAL = {
   DAY_SECONDS: 6,            // durée réelle d'un jour de jeu à la vitesse ×1
   START_CASH: 150e6,
   START_YEAR: 2025,
-  GOAL_VALUE: 1e9,           // objectif : 1 milliard € de valeur d'entreprise
 
   FUEL_BASE: 0.80,           // €/kg de kérosène
   UTIL_HOURS: 15,            // heures exploitables par jour et par avion
@@ -277,3 +276,32 @@ const PROGRAMS = [
 ];
 const PROGRAM_BY_ID = {};
 PROGRAMS.forEach(p => PROGRAM_BY_ID[p.id] = p);
+
+/* =========================================================================
+   Niveaux de difficulté. Chaque réglage agit sur le départ, la rareté des
+   créneaux, l'agressivité des concurrents et les conditions de victoire.
+   ========================================================================= */
+const DIFFICULTIES = {
+  facile: {
+    id:'facile', name:'Facile', cash:150e6,
+    slotPrice:1.0, slotCap:1.00, aggro:0.65, repGate:0, goal:1e9, profitYears:2, minRep:52,
+    desc:'Trésorerie confortable, aéroports peu disputés, concurrents placides. ' +
+         'Le milliard d’euros se joue en quelques années.'
+  },
+  normal: {
+    id:'normal', name:'Normal', cash:130e6,
+    slotPrice:1.18, slotCap:0.86, aggro:1.0, repGate:0.92, goal:3e9, profitYears:3, minRep:56,
+    desc:'Les grands aéroports saturent et coûtent cher, les concurrents ripostent ' +
+         'quand vous les attaquez, et les portes des hubs internationaux ne s’ouvrent ' +
+         'qu’aux compagnies réputées.'
+  },
+  difficile: {
+    id:'difficile', name:'Difficile', cash:105e6,
+    slotPrice:1.42, slotCap:0.72, aggro:1.5, repGate:1.05, goal:8e9, profitYears:3, minRep:62,
+    desc:'Départ à l’étroit, créneaux rares et chers, concurrents qui cassent les prix ' +
+         'sur vos meilleures lignes. Dix milliards d’euros, la première place mondiale, ' +
+         'un réseau sur tous les continents et des comptes durablement dans le vert.'
+  }
+};
+const DIFF_ORDER = ['facile', 'normal', 'difficile'];
+const REGION_ALL = ['EU', 'ME', 'AF', 'AS', 'OC', 'NA', 'SA'];

@@ -288,6 +288,17 @@ hr.sp{border:0;border-top:1px solid var(--line2);margin:13px 0}
   backdrop-filter:blur(8px);box-shadow:var(--shadow);transition:right .24s cubic-bezier(.2,.8,.2,1)}
 #opts.open{display:flex;animation:pop .2s cubic-bezier(.2,.9,.25,1)}
 #opts.shift{right:418px}
+.diffs{display:flex;gap:5px;background:var(--track);padding:4px;border-radius:10px}
+.diffs button{flex:1;border:0;background:transparent;padding:8px 4px;border-radius:8px;
+  font-size:12.5px;font-weight:600;color:var(--ink2);transition:.15s}
+.diffs button:hover{background:var(--hover)}
+.diffs button.on{background:var(--card);color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.16)}
+.projs{display:flex;gap:4px;background:var(--track);padding:3px;border-radius:9px}
+.projs button{flex:1;border:0;background:transparent;padding:6px 4px;border-radius:7px;
+  font-size:11px;font-weight:600;color:var(--ink2);transition:.15s}
+.projs button:hover{background:var(--hover)}
+.projs button.on{background:var(--card);color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.15)}
+#opts{min-width:236px}
 #opts .oh{font-family:var(--font-s);font-size:12px;letter-spacing:.6px;text-transform:uppercase;
   color:var(--ink3);padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid var(--line)}
 #opts label{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink2);
@@ -389,11 +400,16 @@ hr.sp{border:0;border-top:1px solid var(--line2);margin:13px 0}
   <div class="oh">Affichage</div>
   <label><input type="checkbox" data-opt="dark"> Mode sombre</label>
   <label><input type="checkbox" data-opt="night"> Cycle jour / nuit</label>
+  <label><input type="checkbox" data-opt="borders"> Frontières</label>
+  <label><input type="checkbox" data-opt="lakes"> Lacs</label>
   <label><input type="checkbox" data-opt="rivals"> Lignes des concurrents</label>
   <label><input type="checkbox" data-opt="trails"> Traînées de condensation</label>
   <label><input type="checkbox" data-opt="halos"> Halos de trafic</label>
   <label><input type="checkbox" data-opt="labels"> Noms des villes</label>
   <label><input type="checkbox" data-opt="grain"> Grain du papier</label>
+  <div class="oh" style="margin-top:9px">Projection</div>
+  <div class="projs" id="projs"></div>
+  <div class="mini" id="projNote" style="margin-top:5px;line-height:1.45"></div>
 </div>
 
 <div id="hud">

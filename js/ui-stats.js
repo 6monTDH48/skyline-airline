@@ -178,7 +178,7 @@ UI.stats = function () {
 UI.airportBlock = function (code) {
   const st = G.airportStats(code), c = CITY_BY_CODE[code];
   const s = G.s;
-  const cap = c.slots || 1;
+  const cap = st.total || 1;
   const wMine = st.used / cap * 100, wIdle = (st.owned - st.used) / cap * 100,
         wRiv = st.rivalSlots / cap * 100;
 
@@ -202,7 +202,7 @@ UI.airportBlock = function (code) {
     money(st.fees) + '</b> par jour' + (s.hubs.indexOf(code) >= 0 ? ' (tarif hub)' : '') + '.</div></div>';
 
   h += '<div class="card"><div class="row"><span class="mini">Occupation des créneaux</span>' +
-    '<span class="mini">' + c.slots + ' au total</span></div>' +
+    '<span class="mini">' + st.total + ' au total</span></div>' +
     '<div class="splitbar tri" style="margin-top:6px">' +
     '<i style="width:' + wMine + '%"></i><u style="width:' + wIdle + '%"></u>' +
     '<em style="width:' + wRiv + '%"></em></div>' +

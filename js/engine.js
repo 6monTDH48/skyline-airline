@@ -12,6 +12,12 @@ const G = {
   emit(ev, a, b) { (this.listeners[ev] || []).forEach(f => f(a, b)); }
 };
 
+/* Réglage de difficulté de la partie en cours. */
+function DIFF() {
+  return (G.s && DIFFICULTIES[G.s.diff]) || DIFFICULTIES.normal;
+}
+G.DIFF = DIFF;
+
 /* ------------------------------- géométrie ------------------------------- */
 function distKm(a, b) {
   const R = 6371, rad = Math.PI / 180;
@@ -76,13 +82,16 @@ function legsPerDay(type, dist) {
 /* ========================================================================= */
 /*                            CRÉATION DE PARTIE                             */
 /* ========================================================================= */
-G.newGame = function (airlineName, homeCode) {
+G.newGame = function (airlineName, homeCode, diff) {
+  const D = DIFFICULTIES[diff] || DIFFICULTIES.normal;
   const s = {
     version: 1,
+    diff: D.id,
     airline: {name: airlineName || 'Skyline', color: '#1f4e79'},
     home: homeCode,
     day: 0, y: BAL.START_YEAR, m: 0, d: 1,
-    cash: BAL.START_CASH,
+    cash: D.cash,
+    profitStreak: 0, yearProfit: 0,
     rep: BAL.REP_START,
     loans: [],
     slots: {},
@@ -220,23 +229,48 @@ function slotsUsed(code) {
   G.s.routes.forEach(r => { if (r.a === code || r.b === code) n += r.ac.length; });
   return n;
 }
-function rivalSlots(code) {
+function rivalSlots(code) {   /* occupation estimée des concurrents */
   let n = 0;
   G.s.rivals.forEach(r => r.routes.forEach(rt => {
     if (rt.a === code || rt.b === code) n += Math.ceil(rt.freq / 3);
   }));
   return n;
 }
+/* Capacité effective d'un aéroport : la difficulté la resserre. */
+function slotsTotal(code) {
+  return Math.max(4, Math.round(CITY_BY_CODE[code].slots * DIFF().slotCap));
+}
+G.slotsTotal = slotsTotal;
+
 function slotsFree(code) {
-  const c = CITY_BY_CODE[code];
-  return Math.max(0, c.slots - rivalSlots(code) - slotsOwned(code));
+  return Math.max(0, slotsTotal(code) - rivalSlots(code) - slotsOwned(code));
 }
 function slotCost(code) {
   const c = CITY_BY_CODE[code];
-  return Math.round((BAL.SLOT_BASE + BAL.SLOT_SIZE * c.size) * (1 + 0.35 * (1 - slotsFree(code) / Math.max(1, c.slots))));
+  return Math.round((BAL.SLOT_BASE + BAL.SLOT_SIZE * c.size) * DIFF().slotPrice *
+                    (1 + 0.35 * (1 - slotsFree(code) / Math.max(1, slotsTotal(code)))));
 }
+
+/* Réputation exigée pour obtenir un créneau. Les grandes plateformes ne
+   traitent pas avec une compagnie inconnue ; la base d'attache fait exception,
+   sans quoi la partie serait bloquée dès le premier jour. */
+function slotMinRep(code) {
+  const g = DIFF().repGate;
+  if (!g || code === G.s.home) return 0;
+  const sz = CITY_BY_CODE[code].size;
+  if (sz >= 0.88) return Math.round(62 * g);
+  if (sz >= 0.72) return Math.round(52 * g);
+  if (sz >= 0.56) return Math.round(42 * g);
+  return 0;
+}
+G.slotMinRep = slotMinRep;
+
 G.buySlot = function (code) {
   const s = G.s, cost = slotCost(code);
+  const need = slotMinRep(code);
+  if (need && s.rep < need)
+    return {ok:false, why: CITY_BY_CODE[code].name + ' n’accorde de créneau qu’aux compagnies ' +
+            'de réputation ' + need + ' ou plus. La vôtre est de ' + Math.round(s.rep) + '.'};
   if (slotsFree(code) <= 0) return {ok:false, why:'Plus aucun créneau disponible ici.'};
   if (s.cash < cost) return {ok:false, why:'Trésorerie insuffisante.'};
   s.cash -= cost;
@@ -851,6 +885,23 @@ function monthEnd() {
     led: m.led, value: G.companyValue(), rep: s.rep, share: G.marketShare()
   });
   if (s.history.length > 240) s.history.shift();
+
+  // bilan de l'année civile : une année bénéficiaire avec une réputation
+  // correcte prolonge la série, sinon elle repart de zéro
+  s.yearProfit = (s.yearProfit || 0) + (m.rev - m.cost);
+  if (s.m === 11) {
+    const D = DIFF();
+    if (s.yearProfit > 0 && s.rep >= D.minRep) {
+      s.profitStreak = (s.profitStreak || 0) + 1;
+      pushLog('Exercice clos', 'Année ' + s.y + ' bénéficiaire (' + money(s.yearProfit) +
+              '). ' + s.profitStreak + ' année(s) de suite dans le vert.', 'good');
+    } else {
+      if (s.profitStreak) pushLog('Exercice clos',
+        'La série d’années bénéficiaires est rompue.', 'bad');
+      s.profitStreak = 0;
+    }
+    s.yearProfit = 0;
+  }
   s.month = newMonth();
 
   rivalTurn();
@@ -862,9 +913,24 @@ const RIVAL_MAX_ROUTES = 30, RIVAL_MAX_FREQ = 9;
 function rivalTurn() {
   const s = G.s;
   s.rivals.forEach(rv => {
-    const budget = rv.aggro * (0.9 + Math.random() * 0.6);
+    const aggro = rv.aggro * DIFF().aggro;
+    const budget = aggro * (0.9 + Math.random() * 0.6);
+
+    // 0. guerre des prix : là où le joueur domine, on casse les tarifs
+    if (DIFF().aggro >= 1) {
+      s.routes.forEach(r => {
+        if (r.last.share < 0.42 || r.last.pax < 120) return;
+        const ex = rv.routes.find(rt => pairKey(rt.a, rt.b) === pairKey(r.a, r.b));
+        if (!ex) return;
+        if (Math.random() < 0.34 * aggro) {
+          ex.price = Math.max(0.68, ex.price - 0.035);
+          ex.freq = Math.min(RIVAL_MAX_FREQ, ex.freq + 1);
+        }
+      });
+    }
+
     // 1. réaction : attaquer les meilleures lignes du joueur
-    if (Math.random() < 0.30 * rv.aggro && s.routes.length) {
+    if (Math.random() < 0.30 * aggro && s.routes.length) {
       const best = s.routes.slice().sort((a, b) => b.last.profit - a.last.profit)[0];
       if (best && best.last.profit > 25e3) {
         const okRegion = rv.regions.indexOf(CITY_BY_CODE[best.a].region) >= 0 ||
@@ -938,6 +1004,9 @@ G.ROUTE_STATES = {
   saturee:     {label: 'saturée',      tag: 'bad',
                 hint: 'Les avions partent pleins : vous refusez des passagers. Ajoutez un appareil, ' +
                       'montez en fréquence ou augmentez le tarif.'},
+  pleine:      {label: 'pleine',       tag: 'bad',
+                hint: 'Les avions partent complets : impossible de prendre un passager de plus. ' +
+                      'Un appareil supplémentaire, ou un tarif plus élevé, augmenterait la recette.'},
   deficitaire: {label: 'déficitaire',  tag: 'warn', hint: 'La ligne perd de l’argent.'},
   creuse:      {label: 'peu remplie',  tag: 'warn', hint: 'Beaucoup de sièges vides : baissez la fréquence ou le tarif.'},
   clouee:      {label: 'clouée au sol','tag': 'bad', hint: 'Aucun vol : appareils immobilisés ou ligne fermée.'},
@@ -1027,9 +1096,10 @@ G.airportStats = function (code) {
   });
   st.rivals.sort((a, b) => b.freq - a.freq);
 
+  st.total = slotsTotal(code);
   st.owned = slotsOwned(code);
   st.used = slotsUsed(code);
-  st.rivalSlots = Math.min(c.slots, rivalSlots(code));
+  st.rivalSlots = Math.min(slotsTotal(code), rivalSlots(code));
   st.free = slotsFree(code);
   return st;
 };
@@ -1056,14 +1126,49 @@ G.marketShare = function () {
   s.rivals.forEach(r => tot += r.paxDay);
   return tot > 0 ? mine / tot : 0;
 };
+/* Les quatre conditions de victoire, et leur avancement. */
+G.goals = function () {
+  const s = G.s, D = DIFF();
+  const val = G.companyValue();
+  const myPax = s.routes.reduce((t, x) => t + x.last.pax, 0);
+  const bestRival = s.rivals.length ? Math.max(...s.rivals.map(r => r.paxDay)) : 0;
+  const regions = new Set();
+  s.routes.forEach(r => {
+    if (r.last.legs > 0) {
+      regions.add(CITY_BY_CODE[r.a].region);
+      regions.add(CITY_BY_CODE[r.b].region);
+    }
+  });
+  return [
+    {id:'value', label:'Valeur d’entreprise',
+     done: val >= D.goal, now: val, target: D.goal,
+     text: money(val) + ' / ' + money(D.goal)},
+    {id:'lead', label:'Première compagnie mondiale',
+     done: myPax >= bestRival && myPax > 0, now: myPax, target: Math.max(1, bestRival),
+     text: num(myPax) + ' contre ' + num(bestRival) + ' pax/jour au meilleur concurrent'},
+    {id:'world', label:'Réseau mondial',
+     done: regions.size >= REGION_ALL.length && s.hubs.length >= 3,
+     now: regions.size + Math.min(1, s.hubs.length / 3), target: REGION_ALL.length + 1,
+     text: regions.size + ' / ' + REGION_ALL.length + ' régions desservies · ' +
+           s.hubs.length + ' / 3 hubs' +
+           (regions.size < REGION_ALL.length
+             ? '. Il manque : ' + REGION_ALL.filter(r => !regions.has(r))
+                 .map(r => REGION_NAMES[r]).join(', ') + '.'
+             : '')},
+    {id:'solid', label:'Rentabilité durable',
+     done: s.profitStreak >= D.profitYears && s.rep >= D.minRep,
+     now: s.profitStreak, target: D.profitYears,
+     text: s.profitStreak + ' / ' + D.profitYears + ' années bénéficiaires d’affilée · ' +
+           'réputation ' + Math.round(s.rep) + ' / ' + D.minRep}
+  ];
+};
+
 function checkVictory() {
   const s = G.s;
   if (s.won || s.dead) return;
-  const val = G.companyValue(), share = G.marketShare();
-  const top = s.rivals.every(r => r.paxDay <= s.routes.reduce((t, x) => t + x.last.pax, 0));
-  if (val >= BAL.GOAL_VALUE && top) {
+  if (G.goals().every(g => g.done)) {
     s.won = true;
-    G.emit('victory', {value: val, share});
+    G.emit('victory', {value: G.companyValue(), share: G.marketShare()});
   }
 }
 
@@ -1127,6 +1232,9 @@ G.hasSave = function () {
    une campagne de plusieurs heures ne doit pas se perdre à chaque évolution. */
 function migrate(s) {
   s.programs = s.programs || {};
+  s.diff = DIFFICULTIES[s.diff] ? s.diff : 'facile';   // parties d'avant les niveaux
+  s.profitStreak = s.profitStreak || 0;
+  s.yearProfit = s.yearProfit || 0;
   s.slots    = s.slots    || {};
   s.hubs     = s.hubs     || [s.home];
   s.loans    = s.loans    || [];

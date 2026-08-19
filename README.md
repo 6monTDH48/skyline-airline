@@ -16,9 +16,38 @@ navigateur récent et sauvegarde la partie dans le navigateur.
 
 ## Le principe
 
-Vous dirigez une compagnie aérienne mondiale. 150 M€ en caisse, deux A320, et une carte
-du monde avec 71 vraies villes. Objectif final : **1 milliard € de valeur d'entreprise**
-et la **première place mondiale** en trafic. Ensuite, la partie continue en mode libre.
+Vous dirigez une compagnie aérienne mondiale. Deux A320, une carte du monde avec
+**151 vrais aéroports**, et cinq concurrents déjà installés.
+
+La victoire demande **quatre conditions réunies en même temps** :
+
+| Condition | Détail |
+|---|---|
+| Valeur d'entreprise | 1, 3 ou 8 Md€ selon la difficulté |
+| Première place mondiale | transporter plus de passagers que chaque concurrent |
+| Réseau mondial | desservir les sept régions du monde et exploiter trois hubs |
+| Rentabilité durable | deux ou trois exercices bénéficiaires d'affilée, avec une réputation tenue |
+
+La troisième oblige à sortir d'Europe : l'Océanie n'est atteignable qu'avec un hub en Asie
+ou au Moyen-Orient. La quatrième interdit de gagner en brûlant la caisse.
+
+## Difficulté
+
+Trois niveaux, choisis au démarrage à côté de la base :
+
+| | Facile | Normal | Difficile |
+|---|---|---|---|
+| Trésorerie de départ | 150 M€ | 130 M€ | 105 M€ |
+| Objectif de valeur | 1 Md€ | 3 Md€ | 8 Md€ |
+| Créneaux disponibles | 100 % | 86 % | 72 % |
+| Prix des créneaux | ×1 | ×1,2 | ×1,4 |
+| Agressivité des concurrents | faible | normale | forte |
+| Réputation exigée par les grands aéroports | aucune | oui | oui, plus haute |
+
+En normal et en difficile, les grandes plateformes n'accordent leurs créneaux qu'aux
+compagnies d'une certaine réputation : Heathrow et JFK se méritent. Votre base d'attache
+fait exception. Les concurrents, eux, cassent les prix et montent en fréquence sur les
+lignes où vous prenez l'ascendant.
 
 ## Prise en main
 
@@ -52,7 +81,7 @@ compte tenu de la demande, de la concurrence et de tous les coûts.
 | Demande | Par paire de villes : population, indices affaires/tourisme, distance, proximité géographique, saison |
 | Concurrence | 5 compagnies IA qui ouvrent des lignes, montent en fréquence et cassent les prix sur vos meilleures routes — plus une concurrence de fond sur chaque liaison |
 | Parts de marché | Réparties selon fréquence, tarif et réputation de chaque opérateur |
-| Créneaux | Ressource rare : les aéroports saturent, les concurrents les prennent aussi |
+| Créneaux | Ressource rare : les aéroports saturent, les concurrents les prennent aussi, et les plus grands exigent de la réputation |
 | Hubs | Jusqu'à 4. Redevances réduites et **correspondances** : vos lignes se nourrissent entre elles |
 | Cabines | Éco / affaires / première — 3× et 6× le tarif, mais 2,4× et 4,6× la place |
 | Fret | En soute sur les avions de ligne, ou avions tout-cargo (part de marché fondée sur le tonnage offert) |
@@ -136,15 +165,32 @@ sur papier clair à un atlas de nuit sur fond encre.
 
 ![La même carte en mode sombre](docs/carte-nuit.jpg)
 
+## La carte
+
+Le fond de carte vient de **Natural Earth au 1:10 m** : 1 055 anneaux de trait de côte,
+347 segments de frontières internationales, 197 lacs et mers intérieures. Les frontières
+sont extraites en ne gardant que les arcs partagés par deux pays, ce qui les distingue
+proprement des côtes.
+
+Trois projections sont disponibles dans les options d'affichage :
+
+- **Robinson**, celle des atlas : proportions crédibles, carte en forme de globe aplati ;
+- **Mercator**, celle des cartes en ligne : formes locales exactes, pôles démesurés ;
+- **Plate carrée**, la plus simple et la plus rapide.
+
+Les étiquettes des 151 aéroports sont placées sans chevauchement : chaque nom cherche une
+place libre autour de son point, par ordre d'importance — vos escales et les grands
+marchés d'abord. Ce qui ne rentre pas n'est pas affiché.
+
 ## Fichiers
 
 ```
 index.html          interface et styles
-js/data-land.js     trait de côte mondial (Natural Earth 1:50m, 247 anneaux simplifiés)
-js/data-world.js    les 71 villes desservies
+js/data-land.js     fond de carte (Natural Earth 1:10 m : côtes, frontières, lacs)
+js/data-world.js    les 151 aéroports desservis
 js/data-game.js     équilibrage, avions, rétrofits, programmes, concurrents, événements, plan comptable
 js/engine.js        moteur de simulation (demande, exploitation, IA, finances)
-js/render.js        rendu de la carte sur canvas
+js/render.js        rendu de la carte : projections, couches, étiquettes
 js/ui.js            panneaux et fiches
 js/ui-stats.js      panneau Statistiques et fiche statistique d'escale
 js/main.js          boucle de jeu, entrées, sauvegarde
@@ -171,9 +217,10 @@ sans navigateur, ce qui a servi à mesurer l'équilibrage sur des parties de hui
 
 ## Crédits
 
-Le trait de côte provient de [Natural Earth](https://www.naturalearthdata.com/)
-(échelle 1:50 m, domaine public), simplifié par l'algorithme de Douglas-Peucker
-et réduit à 247 anneaux pour tenir dans le dépôt.
+Le fond de carte provient de [Natural Earth](https://www.naturalearthdata.com/)
+(échelle 1:10 m, domaine public), simplifié par l'algorithme de Douglas-Peucker.
+Les coordonnées des aéroports viennent d'[OurAirports](https://ourairports.com/)
+(domaine public).
 
 Les caractéristiques des appareils, les redevances et les postes de charges sont
 inspirés des ordres de grandeur du transport aérien, arrondis pour rester jouables.
