@@ -38,6 +38,17 @@ const BAL = {
 
   SLOT_BASE: 900e3, SLOT_SIZE: 4.2e6, // coût d'un créneau
   SLOT_UPKEEP: 14e3,                  // €/mois par créneau
+  /* Sortir d'un aéroport saturé. Les horaires creux sont une marge que
+     personne ne se dispute ; l'agrandissement se paie et s'attend ; le rachat
+     à une compagnie installée se paie très cher, tout de suite. */
+  OFFPEAK_SHARE: 0.40,                // capacité en heure creuse, en part de la capacité
+  OFFPEAK_PRICE: 0.50,                // prix d'un créneau creux, en part du prix normal
+  OFFPEAK_MALUS: 0.45,                // attractivité perdue si tous vos créneaux sont creux
+  EXPAND_BASE: 55e6, EXPAND_SIZE: 240e6,        // coût des travaux
+  EXPAND_GAIN: 0.14,                            // créneaux gagnés, en part de la capacité
+  EXPAND_MONTHS_BASE: 8, EXPAND_MONTHS_SIZE: 10,// durée du chantier
+  SLOT_RESALE: 3.5,                   // multiplicateur de base d'un rachat
+  SLOT_RESALE_REP: 34,                // réputation exigée, ×(1 + taille de l'aéroport)
   HUB_BASE: 14e6, HUB_SIZE: 42e6,     // coût de création d'un hub
   MAX_HUBS: 4,
   HUB_FEE_DISCOUNT: 0.55,             // redevances à votre hub

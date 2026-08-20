@@ -88,7 +88,8 @@ const Map2D = {
 
   /* réglages d'affichage, conservés d'une partie à l'autre */
   opts: {night: true, rivals: true, trails: true, labels: true, grain: true,
-         halos: true, dark: false, borders: true, lakes: true, proj: 'robinson'},
+         halos: true, dark: false, borders: true, lakes: true, proj: 'robinson',
+         pauseEvt: true, report: true},
 
   /* --------------------------------- palettes -------------------------- */
   PAL: {
