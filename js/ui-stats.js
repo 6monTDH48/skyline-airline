@@ -101,9 +101,9 @@ UI.stats = function () {
     '<div class="splitbar"><i style="width:' + (variable / costTotal * 100) + '%"></i>' +
     '<u style="width:' + (passive / costTotal * 100) + '%"></u></div>' +
     '<div class="row mini" style="margin-top:7px">' +
-    '<span><span class="dot" style="background:#a63a2b"></span>Variables ' + money(variable) +
+    '<span><span class="dot" style="background:var(--red)"></span>Variables ' + money(variable) +
     ' (' + pct(variable / costTotal) + ')</span>' +
-    '<span><span class="dot" style="background:#8a6a3a"></span>Passives ' + money(passive) +
+    '<span><span class="dot" style="background:var(--gold)"></span>Passives ' + money(passive) +
     ' (' + pct(passive / costTotal) + ')</span></div>' +
     '<div class="mini" style="margin-top:8px">Les charges passives courent que vos avions volent ou non : ' +
     'salaires des équipages, maintenance programmée, assurance, stationnement, formation, siège. ' +
@@ -147,13 +147,13 @@ UI.stats = function () {
     hh.forEach((x, i) => {
       const rh = x.rev / max * (H - 14), ch = x.cost / max * (H - 14);
       h += '<rect x="' + (i * bw + 1) + '" y="' + (H - 10 - rh) + '" width="' + (bw / 2 - 1) +
-           '" height="' + Math.max(0.6, rh) + '" fill="#3d7a4e" rx="1"/>' +
+           '" height="' + Math.max(0.6, rh) + '" style="fill:var(--green)" rx="1"/>' +
            '<rect x="' + (i * bw + bw / 2) + '" y="' + (H - 10 - ch) + '" width="' + (bw / 2 - 1) +
-           '" height="' + Math.max(0.6, ch) + '" fill="#a63a2b" rx="1"/>';
+           '" height="' + Math.max(0.6, ch) + '" style="fill:var(--red)" rx="1"/>';
     });
-    h += '<line x1="0" y1="' + (H - 10) + '" x2="' + W + '" y2="' + (H - 10) + '" stroke="var(--line)"/></svg>' +
-      '<div class="row mini"><span><span class="dot" style="background:#3d7a4e"></span>Recettes ' +
-      '<span class="dot" style="background:#a63a2b;margin-left:8px"></span>Charges</span>' +
+    h += '<line x1="0" y1="' + (H - 10) + '" x2="' + W + '" y2="' + (H - 10) + '" style="stroke:var(--line)"/></svg>' +
+      '<div class="row mini"><span><span class="dot" style="background:var(--green)"></span>Recettes ' +
+      '<span class="dot" style="background:var(--red);margin-left:8px"></span>Charges</span>' +
       '<span>' + MONTHS[hh[hh.length - 1].m].slice(0, 4) + '. ' + hh[hh.length - 1].y + '</span></div></div>';
   }
 
@@ -207,10 +207,10 @@ UI.airportBlock = function (code) {
     '<i style="width:' + wMine + '%"></i><u style="width:' + wIdle + '%"></u>' +
     '<em style="width:' + wRiv + '%"></em></div>' +
     '<div class="row mini" style="margin-top:6px;flex-wrap:wrap;gap:10px">' +
-    '<span><span class="dot" style="background:#1f4e79"></span>Vous, utilisés ' + st.used + '</span>' +
-    '<span><span class="dot" style="background:#7fa9cf"></span>Vous, libres ' + (st.owned - st.used) + '</span>' +
-    '<span><span class="dot" style="background:#b58c78"></span>Concurrents ' + st.rivalSlots + '</span>' +
-    '<span><span class="dot" style="background:#ddd2ba"></span>Disponibles ' + st.free + '</span>' +
+    '<span><span class="dot" style="background:var(--st-ok)"></span>Vous, utilisés ' + st.used + '</span>' +
+    '<span><span class="dot" style="background:var(--st-low)"></span>Vous, libres ' + (st.owned - st.used) + '</span>' +
+    '<span><span class="dot" style="background:var(--st-rival)"></span>Concurrents ' + st.rivalSlots + '</span>' +
+    '<span><span class="dot" style="background:var(--track2)"></span>Disponibles ' + st.free + '</span>' +
     '</div></div>';
 
   h += '<div class="card"><div class="row"><span class="mini">Votre part du marché de l’escale</span>' +

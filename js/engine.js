@@ -1579,8 +1579,8 @@ G.ROUTE_STATES = {
   pleine:      {label: 'pleine',       tag: 'bad',
                 hint: 'Les avions partent complets : impossible de prendre un passager de plus. ' +
                       'Un appareil supplémentaire, ou un tarif plus élevé, augmenterait la recette.'},
-  deficitaire: {label: 'déficitaire',  tag: 'warn', hint: 'La ligne perd de l’argent.'},
-  creuse:      {label: 'peu remplie',  tag: 'warn', hint: 'Beaucoup de sièges vides : baissez la fréquence ou le tarif.'},
+  deficitaire: {label: 'déficitaire',  tag: 'def',  hint: 'La ligne perd de l’argent.'},
+  creuse:      {label: 'peu remplie',  tag: 'low',  hint: 'Beaucoup de sièges vides : baissez la fréquence ou le tarif.'},
   clouee:      {label: 'clouée au sol','tag': 'bad', hint: 'Aucun vol : appareils immobilisés ou ligne fermée.'},
   vide:        {label: 'sans avion',   tag: 'bad',  hint: 'Aucun appareil affecté.'},
   normale:     {label: '',             tag: '',     hint: ''}

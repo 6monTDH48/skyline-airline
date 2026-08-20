@@ -197,6 +197,14 @@ Le panneau **Réseau** affiche les lignes sous leur **nom complet** (« Paris �
 avec le code IATA et la distance en dessous, une étiquette d'état et une alerte en tête
 quand des lignes saturent. Survoler une ligne du tableau la met en avant sur la carte.
 
+Les étiquettes et les jauges du volet reprennent **exactement les couleurs du tableau
+ci-dessus** : une ligne saturée porte le même rouge dans le volet que sur la carte, une
+déficitaire le même violet. On passe de l'une à l'autre sans traduire.
+
+Chaque liste — les lignes comme la flotte — se lit au choix **en tableau**, dense et trié,
+ou **en cartes**, plus lisibles mais trois fois moins nombreuses à l'écran. Le commutateur
+est en tête de liste.
+
 ## Agir sur plusieurs éléments à la fois
 
 Les tableaux du panneau **Réseau** et du panneau **Flotte** se cochent, et une barre d'actions
@@ -294,14 +302,24 @@ concurrents, ceux encore à vendre), votre part du marché local et les compagni
 
 ## Affichage
 
-L'engrenage en bas à droite de la carte ouvre les réglages : **mode sombre**,
+L'interface est un **centre de contrôle** : fond ardoise, typographie technique, chiffres
+tabulaires, codes IATA et immatriculations en chasse fixe. Le bandeau du haut aligne six
+tuiles — trésorerie, résultat du mois avec la courbe des douze derniers, flotte, réputation,
+part de marché, valeur contre objectif. Chacune porte un liseré de couleur : c'est ce qu'on
+voit du coin de l'œil, sans lire le chiffre.
+
+L'engrenage en bas à droite de la carte ouvre les réglages : **thème sombre**,
 **cycle jour / nuit**, lignes des concurrents, traînées de condensation, halos de trafic,
-noms de villes, grain du papier. Les choix sont conservés d'une partie à l'autre.
+noms de villes, grain du papier, **listes en cartes plutôt qu'en tableau**. Les choix sont
+conservés d'une partie à l'autre.
 
-Le mode sombre habille aussi bien l'interface que la carte, qui passe d'un atlas de jour
-sur papier clair à un atlas de nuit sur fond encre.
+Décocher le thème sombre rend l'**atlas de papier** : mêmes panneaux, mêmes jauges, mais
+palette crème et bleu marine, et la carte repasse en vue de jour.
 
-![La même carte en mode sombre](docs/carte-nuit.jpg)
+Le volet de droite se **redimensionne** : attrapez son bord gauche et tirez. Les tableaux
+denses respirent, et la largeur est mémorisée.
+
+![La même carte en vue de nuit](docs/carte-nuit.jpg)
 
 ## La carte
 
