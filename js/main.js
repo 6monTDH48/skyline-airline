@@ -85,6 +85,36 @@ function applyTheme() {
   Map2D.bgKey = '';                       // le fond de carte doit être repeint
 }
 
+/* =============================== volet =================================== */
+/* Une seule variable porte la largeur du volet : le volet lui-même, mais aussi
+   les contrôles de carte et la légende qui doivent s'écarter, la lisent. */
+function applyDockWidth(w) {
+  const v = Math.max(360, Math.min(760, Math.round(w)));
+  document.documentElement.style.setProperty('--dockw', v + 'px');
+  Map2D.opts.dockw = v;
+}
+
+/* Poignée de redimensionnement, sur le bord gauche du volet. */
+function dockResize() {
+  const grip = document.getElementById('dockgrip');
+  if (!grip) return;
+  let dragging = false;
+  grip.addEventListener('mousedown', e => {
+    dragging = true; e.preventDefault();
+    document.body.style.cursor = 'col-resize';
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    applyDockWidth(window.innerWidth - e.clientX);
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = '';
+    Map2D.saveOpts();
+  });
+}
+
 /* ================================ vitesse ================================ */
 function setSpeed(v) {
   SPEED = v;
@@ -249,9 +279,12 @@ function initInput() {
       Map2D.opts[cb.dataset.opt] = cb.checked;
       Map2D.saveOpts();
       if (cb.dataset.opt === 'dark') applyTheme();
+      if (cb.dataset.opt === 'cards') UI.render();
     };
   });
   applyTheme();
+  applyDockWidth(Map2D.opts.dockw);
+  dockResize();
   // choix de la projection
   const projBox = document.getElementById('projs'), projNote = document.getElementById('projNote');
   const paintProj = () => {
@@ -394,6 +427,12 @@ function act(a, v) {
     case 'panel':   UI.open(v, undefined, {root: true}); break;
     case 'guide':   UI.close(); GUIDE.start(); break;
     case 'logfilter': UI.logFilter = v; UI.render(); break;
+    case 'listview':
+      Map2D.opts.cards = (v === 'cards');
+      Map2D.saveOpts();
+      if (window.syncOptBoxes) syncOptBoxes();
+      UI.render();
+      break;
     case 'newroute': UI.newRoute(v || undefined, v ? null : undefined); break;
     case 'wizset':  UI.wizSet(v); break;
     case 'wiztype': UI.wizSet('type', v); break;

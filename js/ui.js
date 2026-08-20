@@ -447,7 +447,7 @@ const UI = {
     h += '<h4 class="sec">Classement mondial</h4><table class="t">';
     const mine = rep.pax / Math.max(1, rep.days || 30);
     const all = rep.rivals.map(r => ({name: r.name, color: r.color, pax: r.pax, mine: false}))
-      .concat([{name: G.s.airline.name, color: '#1f4e79', pax: mine, mine: true}])
+      .concat([{name: G.s.airline.name, color: 'var(--st-ok)', pax: mine, mine: true}])
       .sort((a, b) => b.pax - a.pax);
     all.forEach((r, i) => {
       h += '<tr' + (r.mine ? ' style="background:var(--hover)"' : '') + '><td>' + (i + 1) + '</td>' +
@@ -530,7 +530,7 @@ const UI = {
     if (offOwn)
       h += '<div class="row mini" style="margin-top:8px"><span>Part de vos vols en heure creuse</span>' +
            '<b>' + pct(share) + '</b></div><div class="bar"><i style="width:' +
-           Math.round(share * 100) + '%;background:#a67c1a"></i></div>';
+           Math.round(share * 100) + '%;background:var(--st-hub)"></i></div>';
     h += '<div class="row" style="margin-top:10px">' +
       '<div class="mini">Créneau creux : <b>' + money(offCost) + '</b></div>' +
       '<button class="btn sm" data-a="buyoffpeak" data-v="' + code + '"' +
@@ -692,14 +692,21 @@ const UI = {
     const fare = dem.price * r.priceMult;
     const rivals = RIVAL_IDX.get(pairKey(r.a, r.b)) || [];
 
+    const state = G.routeState(r), sMeta = G.ROUTE_STATES[state], sCol = this.stColor(state);
+
     let h = '';
-    h += '<div class="card"><div class="ttl">' + ca.name + ' ↔ ' + cb.name + '</div>' +
-         '<div class="sub">' + num(r.dist) + ' km · demande estimée ' + num(dem.total) + ' pax/jour</div>' +
-         '<div class="grid3" style="margin-top:10px">' +
+    h += '<div class="card" style="border-left:2px solid ' + sCol + '">' +
+         '<div class="row"><div class="ttl">' + ca.name + ' ↔ ' + cb.name + '</div>' +
+         (sMeta.label ? '<span class="tag ' + sMeta.tag + '">' + sMeta.label + '</span>' : '') + '</div>' +
+         '<div class="sub"><span class="iata">' + r.a + '</span> ↔ <span class="iata">' + r.b +
+         '</span> · ' + num(r.dist) + ' km · demande estimée ' + num(dem.total) + ' pax/jour</div>' +
+         '<div class="grid3">' +
          '<div class="stat">Passagers/j<b>' + num(r.last.pax) + '</b></div>' +
-         '<div class="stat">Remplissage<b>' + pct(r.last.lf) + '</b></div>' +
-         '<div class="stat">Part de marché<b>' + pct(r.last.share) + '</b></div></div>' +
-         '<div class="grid3" style="margin-top:8px">' +
+         '<div class="stat">Remplissage<b>' + pct(r.last.lf) + '</b><div class="bar"><i style="width:' +
+         Math.min(100, r.last.lf * 100).toFixed(0) + '%;background:' + sCol + '"></i></div></div>' +
+         '<div class="stat">Part de marché<b>' + pct(r.last.share) + '</b><div class="bar"><i style="width:' +
+         Math.min(100, r.last.share * 100).toFixed(0) + '%"></i></div></div></div>' +
+         '<div class="grid3" style="margin-top:1px">' +
          '<div class="stat">Recettes/j<b>' + money(r.last.rev) + '</b></div>' +
          '<div class="stat">Coûts/j<b>' + money(r.last.cost) + '</b></div>' +
          '<div class="stat">Résultat/j<b class="' + (r.last.profit >= 0 ? 'pos' : 'neg') + '">' +
@@ -711,11 +718,10 @@ const UI = {
            (adv.action ? '<button class="btn sm" data-a="' + adv.action.a + '" data-v="' +
               adv.action.v + '" style="margin-top:7px">' + adv.action.label + '</button>' : '') +
            '</div>';
-    const stR = G.routeState(r), metaR = G.ROUTE_STATES[stR];
-    if (metaR.hint)
-      h += '<div class="mini flag ' + (metaR.tag === 'bad' ? 'bad' : 'warn') + '" style="margin-top:9px">' +
-           '<b>Ligne ' + metaR.label + '.</b> ' + metaR.hint +
-           (stR === 'saturee' && r.last.unmet > 1 ? ' Environ <b>' + num(r.last.unmet) +
+    if (sMeta.hint)
+      h += '<div class="mini flag ' + (sMeta.tag === 'bad' ? 'bad' : 'warn') + '" style="margin-top:9px">' +
+           '<b>Ligne ' + sMeta.label + '.</b> ' + sMeta.hint +
+           (state === 'saturee' && r.last.unmet > 1 ? ' Environ <b>' + num(r.last.unmet) +
              '</b> passagers par jour partent à la concurrence.' : '') + '</div>';
     if (r.last.legs > 0)
       h += '<div class="minitab" style="margin-top:9px">' +
@@ -772,7 +778,7 @@ const UI = {
       const ac = s.fleet.find(a => a.id === acId); if (!ac) return;
       const t = AC_BY_ID[ac.type];
       const L = legsPerDay(t, r.dist);
-      h += '<div class="card"><div class="row"><div><div class="ttl">' + t.name + ' <span class="mini">' + ac.reg + '</span></div>' +
+      h += '<div class="card"><div class="row"><div><div class="ttl">' + t.name + ' <span class="iata">' + ac.reg + '</span></div>' +
            '<div class="sub">' + L + ' vols/jour · ' + (t.seats ? CABINS[ac.cabin].label + ' · ' + seatsOf(t, ac.cabin).total + ' sièges'
               : t.cargo + ' t de fret') + ' · usure ' + pct(ac.wear) + '</div></div>' +
            '<button class="btn sm gh" data-a="unassign" data-v="' + ac.id + '">Retirer</button></div></div>';
@@ -856,25 +862,31 @@ const UI = {
     if (nSat) h += '<div class="mini flag bad" style="margin-bottom:8px">' + nSat +
       (nSat > 1 ? ' lignes saturées refusent' : ' ligne saturée refuse') +
       ' des passagers faute de sièges. Elles apparaissent en rouge sur la carte.</div>';
-    h += '<table class="t sel"><tr><th style="width:22px"><span class="cbx' +
-         (this.sel.route.length === s.routes.length ? ' on' : '') +
-         '" data-a="selallroute" data-v=""></span></th>' +
-         '<th>Ligne</th><th>Rempl.</th><th>Pax/j</th><th>Résultat/j</th></tr>';
-    sorted.forEach(r => {
-      const st = G.routeState(r), meta = G.ROUTE_STATES[st];
-      h += '<tr' + (this.sel.route.indexOf(r.id) >= 0 ? ' class="on"' : '') +
-           ' data-hover="' + r.id + '"' +
-           ' title="' + CITY_BY_CODE[r.a].name + ' (' + r.a + ') ↔ ' + CITY_BY_CODE[r.b].name +
-           ' (' + r.b + ') · ' + num(r.dist) + ' km' + (meta.hint ? ' · ' + meta.hint : '') + '">' +
-           '<td>' + this.selBox('route', r.id) + '</td>' +
-           '<td data-a="route" data-v="' + r.id + '" style="cursor:pointer"><b>' +
-           CITY_BY_CODE[r.a].name + '</b> ↔ <b>' + CITY_BY_CODE[r.b].name + '</b>' +
-           (meta.label ? ' <span class="tag ' + meta.tag + '">' + meta.label + '</span>' : '') +
-           '<div class="mini">' + r.a + ' ↔ ' + r.b + ' · ' + num(r.dist) + ' km</div></td>' +
-           '<td>' + pct(r.last.lf) + '</td><td>' + num(r.last.pax) + '</td>' +
-           '<td class="' + (r.last.profit >= 0 ? 'pos' : 'neg') + '">' + moneySigned(r.last.profit) + '</td></tr>';
-    });
-    h += '</table>';
+    h += this.viewBar();
+    if (Map2D.opts.cards) {
+      sorted.forEach(r => { h += this.routeCard(r); });
+    } else {
+      h += '<table class="t sel"><tr><th style="width:22px"><span class="cbx' +
+           (this.sel.route.length === s.routes.length ? ' on' : '') +
+           '" data-a="selallroute" data-v=""></span></th>' +
+           '<th>Ligne</th><th style="width:78px">Rempl.</th><th>Pax/j</th><th>Résultat/j</th></tr>';
+      sorted.forEach(r => {
+        const st = G.routeState(r), meta = G.ROUTE_STATES[st];
+        h += '<tr' + (this.sel.route.indexOf(r.id) >= 0 ? ' class="on"' : '') +
+             ' data-hover="' + r.id + '"' +
+             ' title="' + CITY_BY_CODE[r.a].name + ' (' + r.a + ') ↔ ' + CITY_BY_CODE[r.b].name +
+             ' (' + r.b + ') · ' + num(r.dist) + ' km' + (meta.hint ? ' · ' + meta.hint : '') + '">' +
+             '<td>' + this.selBox('route', r.id) + '</td>' +
+             '<td data-a="route" data-v="' + r.id + '" style="cursor:pointer"><b>' +
+             CITY_BY_CODE[r.a].name + '</b> ↔ <b>' + CITY_BY_CODE[r.b].name + '</b>' +
+             (meta.label ? ' <span class="tag ' + meta.tag + '">' + meta.label + '</span>' : '') +
+             '<div class="mini">' + r.a + ' ↔ ' + r.b + ' · ' + num(r.dist) + ' km</div></td>' +
+             '<td>' + this.gaugeCell(pct(r.last.lf), r.last.lf, this.stColor(st)) + '</td>' +
+             '<td>' + num(r.last.pax) + '</td>' +
+             '<td class="' + (r.last.profit >= 0 ? 'pos' : 'neg') + '">' + moneySigned(r.last.profit) + '</td></tr>';
+      });
+      h += '</table>';
+    }
 
     h += '<h4 class="sec">Hubs (' + s.hubs.length + '/' + BAL.MAX_HUBS + ')</h4>';
     s.hubs.forEach(c => {
@@ -922,6 +934,82 @@ const UI = {
            '" data-a="sel' + kind + '" data-v="' + id + '"></span>';
   },
 
+  /* ============================ LISTES ================================== */
+  /* Deux façons de lire une liste. Le tableau tient une quinzaine de lignes
+     à l'écran et se trie ; les cartes n'en montrent que cinq mais donnent
+     l'état d'un coup d'œil. Le choix est mémorisé avec les options d'affichage. */
+  viewBar() {
+    const c = Map2D.opts.cards;
+    return '<div class="segbar">' +
+      '<button class="' + (c ? '' : 'on') + '" data-a="listview" data-v="table">Tableau</button>' +
+      '<button class="' + (c ? 'on' : '') + '" data-a="listview" data-v="cards">Cartes</button>' +
+      '</div>';
+  },
+
+  /* La couleur d'un état, reprise de la palette de la carte : le trait qu'on
+     voit sur l'atlas et la jauge qu'on lit dans le volet disent la même chose. */
+  stColor(st) {
+    return (st === 'saturee' || st === 'pleine') ? 'var(--st-sat)'
+         : st === 'deficitaire' ? 'var(--st-def)'
+         : st === 'creuse' ? 'var(--st-low)'
+         : (st === 'clouee' || st === 'vide') ? 'var(--st-idle)' : 'var(--st-ok)';
+  },
+
+  /* Une valeur et sa jauge dans la même cellule : on lit le chiffre, on voit
+     le niveau, sans que le tableau s'élargisse. */
+  gaugeCell(txt, ratio, col) {
+    return '<div class="cell-g"><div class="bar"><i style="width:' +
+           Math.max(0, Math.min(100, ratio * 100)).toFixed(0) + '%;background:' + col +
+           '"></i></div>' + txt + '</div>';
+  },
+
+  /* L'usure a trois régimes : neuve, à surveiller, à réviser d'urgence. */
+  wearColor(w) {
+    return w > 0.8 ? 'var(--red)' : (w > BAL.MAINT_THRESHOLD ? 'var(--gold)' : 'var(--green)');
+  },
+
+  acBadge(ac) {
+    if (ac.status === 'idle')  return ' <span class="tag warn">au sol</span>';
+    if (ac.status === 'maint') return ' <span class="tag">révision ' + ac.maintLeft + ' j</span>';
+    if (ac.status === 'aog')   return ' <span class="tag bad">immobilisé</span>';
+    return '';
+  },
+
+  acCard(ac) {
+    const t = AC_BY_ID[ac.type];
+    const r = ac.routeId ? G.s.routes.find(x => x.id === ac.routeId) : null;
+    const col = this.wearColor(ac.wear);
+    return '<div class="card" data-a="aircraft" data-v="' + ac.id +
+      '" style="border-left:2px solid ' + col + '">' +
+      '<div class="row"><div class="ttl"><span class="iata">' + ac.reg + '</span>' + t.name + '</div>' +
+      this.acBadge(ac) + '</div>' +
+      '<div class="sub">' + (ac.ageM < 12 ? ac.ageM + ' mois' : (ac.ageM / 12).toFixed(1) + ' ans') +
+      ' · ' + (r ? r.a + ' ↔ ' + r.b : 'sans affectation') + '</div>' +
+      '<div class="grid2">' +
+      '<div class="stat">Usure<b style="color:' + col + '">' + pct(ac.wear) + '</b>' +
+      '<div class="bar"><i style="width:' + Math.min(100, ac.wear * 100).toFixed(0) +
+      '%;background:' + col + '"></i></div></div>' +
+      '<div class="stat">Valeur<b>' + money(acValue(ac)) + '</b></div></div></div>';
+  },
+
+  routeCard(r) {
+    const st = G.routeState(r), meta = G.ROUTE_STATES[st], col = this.stColor(st);
+    return '<div class="card" data-a="route" data-v="' + r.id + '" data-hover="' + r.id +
+      '" style="border-left:2px solid ' + col + '">' +
+      '<div class="row"><div class="ttl">' + CITY_BY_CODE[r.a].name + ' ↔ ' + CITY_BY_CODE[r.b].name +
+      '</div>' + (meta.label ? '<span class="tag ' + meta.tag + '">' + meta.label + '</span>' : '') +
+      '</div>' +
+      '<div class="sub"><span class="iata">' + r.a + '</span> ↔ <span class="iata">' + r.b +
+      '</span> · ' + num(r.dist) + ' km · ' + r.ac.length + ' appareil' +
+      (r.ac.length > 1 ? 's' : '') + '</div>' +
+      '<div class="grid3">' +
+      '<div class="stat">Remplissage<b>' + pct(r.last.lf) + '</b><div class="bar"><i style="width:' +
+      Math.min(100, r.last.lf * 100).toFixed(0) + '%;background:' + col + '"></i></div></div>' +
+      '<div class="stat">Passagers / j<b>' + num(r.last.pax) + '</b></div>' +
+      '<div class="stat">Résultat / j<b class="' + (r.last.profit >= 0 ? 'pos' : 'neg') + '">' +
+      moneySigned(r.last.profit) + '</b></div></div></div>';
+  },
+
   /* Barre d'actions groupées, en tête du panneau, quand la sélection n'est pas
      vide. Chaque bouton dit ce qu'il va faire et sur combien d'éléments. */
   bulkBar(kind, actions) {
@@ -965,26 +1053,28 @@ const UI = {
     ]);
 
     h += '<h4 class="sec">Flotte (' + s.fleet.length + ')</h4>';
-    h += '<table class="t sel"><tr><th style="width:22px">' +
-         '<span class="cbx' + (this.sel.ac.length === list.length ? ' on' : '') +
-         '" data-a="selallac" data-v=""></span></th>' +
-         '<th>Appareil</th><th>Usure</th><th>Affectation</th></tr>';
-    list.forEach(ac => {
-      const t = AC_BY_ID[ac.type];
-      const r = ac.routeId ? s.routes.find(x => x.id === ac.routeId) : null;
-      const wearCol = ac.wear > 0.8 ? 'var(--red)' : (ac.wear > BAL.MAINT_THRESHOLD ? '#a67c1a' : 'var(--green)');
-      let badge = '';
-      if (ac.status === 'idle')  badge = ' <span class="tag warn">au sol</span>';
-      if (ac.status === 'maint') badge = ' <span class="tag">révision ' + ac.maintLeft + ' j</span>';
-      if (ac.status === 'aog')   badge = ' <span class="tag bad">immobilisé</span>';
-      h += '<tr' + (this.sel.ac.indexOf(ac.id) >= 0 ? ' class="on"' : '') + '>' +
-           '<td>' + this.selBox('ac', ac.id) + '</td>' +
-           '<td data-a="aircraft" data-v="' + ac.id + '" style="cursor:pointer"><b>' + ac.reg + '</b>' + badge +
-           '<div class="mini">' + t.name + ' · ' + (ac.ageM < 12 ? ac.ageM + ' mois' : (ac.ageM / 12).toFixed(1) + ' ans') + '</div></td>' +
-           '<td style="color:' + wearCol + '">' + pct(ac.wear) + '</td>' +
-           '<td class="mini">' + (r ? r.a + ' ↔ ' + r.b : '—') + '</td></tr>';
-    });
-    h += '</table>';
+    h += this.viewBar();
+    if (Map2D.opts.cards) {
+      list.forEach(ac => { h += this.acCard(ac); });
+    } else {
+      h += '<table class="t sel"><tr><th style="width:22px">' +
+           '<span class="cbx' + (this.sel.ac.length === list.length ? ' on' : '') +
+           '" data-a="selallac" data-v=""></span></th>' +
+           '<th>Appareil</th><th style="width:78px">Usure</th><th>Affectation</th></tr>';
+      list.forEach(ac => {
+        const t = AC_BY_ID[ac.type];
+        const r = ac.routeId ? s.routes.find(x => x.id === ac.routeId) : null;
+        h += '<tr' + (this.sel.ac.indexOf(ac.id) >= 0 ? ' class="on"' : '') + '>' +
+             '<td>' + this.selBox('ac', ac.id) + '</td>' +
+             '<td data-a="aircraft" data-v="' + ac.id + '" style="cursor:pointer">' +
+             '<span class="iata">' + ac.reg + '</span>' + this.acBadge(ac) +
+             '<div class="mini">' + t.name + ' · ' +
+             (ac.ageM < 12 ? ac.ageM + ' mois' : (ac.ageM / 12).toFixed(1) + ' ans') + '</div></td>' +
+             '<td>' + this.gaugeCell(pct(ac.wear), ac.wear, this.wearColor(ac.wear)) + '</td>' +
+             '<td class="mini">' + (r ? r.a + ' ↔ ' + r.b : '—') + '</td></tr>';
+      });
+      h += '</table>';
+    }
     h += '<div class="mini" style="margin-top:7px">Cliquez un appareil pour sa fiche : cabine, ' +
          'rétrofits, affectation, revente.</div>';
     return h + this.programs();
@@ -1018,7 +1108,7 @@ const UI = {
     const t = AC_BY_ID[ac.type];
     const r = ac.routeId ? s.routes.find(x => x.id === ac.routeId) : null;
     const wearPct = Math.min(100, ac.wear * 100);
-    const wearCol = ac.wear > 0.8 ? '#a63a2b' : (ac.wear > BAL.MAINT_THRESHOLD ? '#a67c1a' : '#3d7a4e');
+    const wearCol = ac.wear > 0.8 ? 'var(--red)' : (ac.wear > BAL.MAINT_THRESHOLD ? 'var(--gold)' : 'var(--green)');
     let badge = '<span class="tag ok">en ligne</span>';
     if (ac.status === 'idle')  badge = '<span class="tag warn">au sol</span>';
     if (ac.status === 'maint') badge = '<span class="tag">révision ' + ac.maintLeft + ' j</span>';
@@ -1096,7 +1186,7 @@ const UI = {
     const s = G.s;
     let h = '';
     if (s.mods.acPrice < 1)
-      h += '<div class="card" style="border-color:#a67c1a"><b>Salon aéronautique</b><div class="mini">Remise de ' +
+      h += '<div class="card" style="border-color:var(--gold)"><b>Salon aéronautique</b><div class="mini">Remise de ' +
            pct(1 - s.mods.acPrice) + ' sur tous les appareils.</div></div>';
     h += '<div class="mini" style="margin-bottom:10px">Trésorerie disponible : <b>' + money(s.cash) + '</b></div>';
 
@@ -1146,9 +1236,9 @@ const UI = {
         const bw = 300 / h6.length, bh = Math.abs(x.profit) / max * 38;
         const y = x.profit >= 0 ? 45 - bh : 45;
         h += '<rect x="' + (i * bw + 1.5) + '" y="' + y + '" width="' + (bw - 3) + '" height="' + Math.max(1, bh) +
-             '" fill="' + (x.profit >= 0 ? '#3d7a4e' : '#a63a2b') + '" rx="1.5"/>';
+             '" style="fill:' + (x.profit >= 0 ? 'var(--green)' : 'var(--red)') + '" rx="1.5"/>';
       });
-      h += '<line x1="0" y1="45" x2="300" y2="45" stroke="#cbbfa8"/></svg>' +
+      h += '<line x1="0" y1="45" x2="300" y2="45" style="stroke:var(--line)"/></svg>' +
            '<div class="row mini"><span>' + MONTHS[h6[0].m] + ' ' + h6[0].y + '</span><span>' +
            MONTHS[h6[h6.length-1].m] + ' ' + h6[h6.length-1].y + '</span></div></div>';
 
@@ -1198,14 +1288,14 @@ const UI = {
     const mine = s.routes.reduce((t, r) => t + r.last.pax, 0);
     const rows = s.rivals.map(r => ({n: r.name, c: r.color, pax: r.paxDay, rep: r.rep,
       rt: r.routes.length, hub: r.home, me: false, style: r.style}));
-    rows.push({n: s.airline.name, c: '#1f4e79', pax: mine, rep: s.rep,
+    rows.push({n: s.airline.name, c: 'var(--st-ok)', pax: mine, rep: s.rep,
       rt: s.routes.length, hub: s.home, me: true, style: 'Votre compagnie'});
     rows.sort((a, b) => b.pax - a.pax);
     const tot = rows.reduce((t, r) => t + r.pax, 0) || 1;
 
     let h = '<table class="t"><tr><th>#</th><th>Compagnie</th><th>Pax/j</th><th>Part</th><th>Rép.</th></tr>';
     rows.forEach((r, i) => {
-      h += '<tr' + (r.me ? ' style="background:#eef5fb;font-weight:600"' : '') + '><td>' + (i + 1) + '</td>' +
+      h += '<tr' + (r.me ? ' style="background:var(--hover);font-weight:600"' : '') + '><td>' + (i + 1) + '</td>' +
         '<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + r.c +
         ';margin-right:6px"></span>' + r.n + '</td><td>' + num(r.pax) + '</td><td>' + pct(r.pax / tot) +
         '</td><td>' + Math.round(r.rep) + '</td></tr>';
@@ -1307,7 +1397,7 @@ const UI = {
       h += '<h4 class="sec">Événements en cours</h4>';
       s.events.forEach(e => {
         const def = EVENT_DEFS.find(d => d.id === e.id);
-        h += '<div class="card" style="border-left:3px solid #a67c1a"><div class="ttl">' + e.label + '</div>' +
+        h += '<div class="card" style="border-left:2px solid var(--gold)"><div class="ttl">' + e.label + '</div>' +
           '<div class="sub">' + (def ? def.text : '') + '</div>' +
           '<div class="mini" style="margin-top:5px">Encore ' + e.left + ' jour(s)</div></div>';
       });
@@ -1366,11 +1456,12 @@ const UI = {
     'certaine réputation — votre base fait exception. Pour monter : des cabines soignées, ' +
     'des avions récents et révisés, des hubs, et des tarifs raisonnables.</div>' +
     '<h4 class="sec">Couleur des lignes</h4><div class="mini">Sur la carte, une ligne ' +
-    '<b style="color:#c8322a">rouge</b> est <b>pleine</b> : les avions partent complets. Si elle ' +
+    '<b style="color:var(--st-sat-i)">rouge</b> est <b>pleine</b> : les avions partent complets. Si elle ' +
     'bat lentement, elle est en plus <b>saturée</b> — elle renvoie beaucoup plus de monde ' +
     'qu’elle n’en transporte, un appareil de plus s’y paierait. Une ligne ' +
-    '<b style="color:#7a5a9c">violette</b> est déficitaire, une ligne ' +
-    '<b style="color:#6f9bc0">bleu pâle</b> vole trop vide. Les lignes saines restent bleu foncé. ' +
+    '<b style="color:var(--st-def-i)">violette</b> est déficitaire, une ligne ' +
+    '<b style="color:var(--st-low-i)">bleu pâle</b> vole trop vide. Les lignes saines gardent ' +
+    'le bleu de la légende. ' +
     'Le panneau Réseau reprend ces états, et survoler une ligne du tableau la met en avant sur la carte.</div>' +
     '<h4 class="sec">Plusieurs avions sur une ligne</h4><div class="mini">Rien ne limite le nombre ' +
     'd’appareils affectés à une même liaison : chacun ajoute ses rotations, donc de la fréquence et ' +
@@ -1547,24 +1638,97 @@ const UI = {
   closeModal() { this.el('modal').classList.remove('open'); },
 
   /* =============================== topbar =============================== */
+  /* Chaque tuile porte une valeur et de quoi la lire immédiatement : une
+     tendance, une jauge, ou la courbe des douze derniers mois. Le liseré de
+     gauche dit d'un coup d'œil si le chiffre va bien — c'est ce qu'on voit
+     sans regarder. */
+
+  /* Couleur du liseré : 'ok', 'warn', 'bad' ou 'info'. */
+  tile(id, kind) { const e = this.el(id); if (e) e.dataset.t = kind; },
+
+  /* Une variation, avec sa flèche et son signe. */
+  trend(v, txt) {
+    if (!v) return '<i>·</i> ' + txt;
+    return '<span class="' + (v > 0 ? 'pos' : 'neg') + '">' +
+           (v > 0 ? '▲' : '▼') + ' ' + txt + '</span>';
+  },
+
+  /* Courbe des douze derniers résultats mensuels, tracée à la main dans le
+     <svg> de la tuile. L'historique est mensuel (engine.js), donc douze points
+     couvrent l'année écoulée. */
+  spark(series) {
+    const el = this.el('sProfit'), fb = this.el('dProfit');
+    if (!el) return;
+    /* Tant qu'il n'y a pas deux mois clos, il n'y a pas de courbe à tracer :
+       la tuile le dit plutôt que de laisser un vide. */
+    if (series.length < 2) {
+      el.style.display = 'none';
+      if (fb) fb.textContent = series.length ? 'un seul mois clos' : 'premier mois en cours';
+      el.innerHTML = '';
+      return;
+    }
+    el.style.display = '';
+    if (fb) fb.textContent = '';
+    const lo = Math.min(0, ...series), hi = Math.max(0, ...series);
+    const span = (hi - lo) || 1;
+    const pts = series.map((v, i) =>
+      ((i / (series.length - 1)) * 100).toFixed(1) + ' ' +
+      (14 - ((v - lo) / span) * 13).toFixed(1));
+    const col = series[series.length - 1] >= 0 ? 'var(--green)' : 'var(--red)';
+    const line = 'M' + pts.join(' L');
+    el.innerHTML =
+      '<path d="' + line + ' L100 15 L0 15 Z" style="fill:' + col + ';opacity:.15;stroke:none"/>' +
+      '<path d="' + line + '" style="fill:none;stroke:' + col + ';stroke-width:1.4;' +
+      'stroke-linejoin:round;stroke-linecap:round"/>';
+  },
+
   topbar() {
     const s = G.s; if (!s) return;
     this.el('brandName').textContent = s.airline.name;
+    const h = s.history || [];
+    const last = h.length ? h[h.length - 1] : null;
+    const prev = h.length > 1 ? h[h.length - 2] : null;
+
     this.el('kCash').innerHTML = '<span class="' + (s.cash < 0 ? 'neg' : '') + '">' + money(s.cash) + '</span>';
+    this.tile('tCash', s.cash < 0 ? 'bad' : 'ok');
+    const dCash = last && prev ? last.cash - prev.cash : 0;
+    this.el('dCash').innerHTML = last && prev
+      ? this.trend(dCash, money(Math.abs(dCash)) + ' sur le mois')
+      : '<i>·</i> premier mois';
+
     const p = s.month.rev - s.month.cost;
     this.el('kProfit').innerHTML = '<span class="' + (p >= 0 ? 'pos' : 'neg') + '">' + moneySigned(p) + '</span>';
+    this.tile('tProfit', p >= 0 ? 'ok' : 'bad');
+    this.spark(h.slice(-12).map(x => x.profit));
+
     const flying = s.fleet.filter(a => a.status === 'flying').length;
-    this.el('kFleet').innerHTML = s.fleet.length + ' <small>(' + flying + ' en ligne)</small>';
-    this.el('kRep').textContent = Math.round(s.rep);
+    const maint  = s.fleet.filter(a => a.status === 'maint').length;
+    this.el('kFleet').innerHTML = s.fleet.length + ' <small>appareils</small>';
+    this.tile('tFleet', maint ? 'warn' : 'info');
+    this.el('dFleet').textContent = flying + ' en ligne' + (maint ? ' · ' + maint + ' en visite' : '');
+
+    this.el('kRep').innerHTML = Math.round(s.rep) + ' <small>/ 100</small>';
+    this.tile('tRep', s.rep >= 70 ? 'ok' : (s.rep >= 50 ? 'warn' : 'bad'));
     this.el('bRep').style.width = s.rep + '%';
-    this.el('bRep').style.background = s.rep >= 75 ? '#3d7a4e' : (s.rep >= 55 ? '#2f6fa8' : '#a63a2b');
+    this.el('bRep').style.background = s.rep >= 70 ? 'var(--green)'
+                                     : (s.rep >= 50 ? 'var(--gold)' : 'var(--red)');
+
     this.el('kShare').textContent = pct(G.marketShare(), 1);
-    const v = G.companyValue();
-    this.el('kValue').textContent = money(v);
-    this.el('bValue').style.width = Math.min(100, v / G.DIFF().goal * 100) + '%';
+    this.tile('tShare', 'info');
+    const dSh = last && prev ? (last.share - prev.share) * 100 : 0;
+    this.el('dShare').innerHTML = last && prev
+      ? this.trend(dSh, Math.abs(dSh).toFixed(1) + ' pt')
+      : '<i>·</i> premier mois';
+
+    const v = G.companyValue(), goal = G.DIFF().goal;
+    this.el('kValue').innerHTML = money(v) + ' <small>/ ' + money(goal) + '</small>';
+    this.tile('tValue', v >= goal ? 'ok' : 'info');
+    this.el('bValue').style.width = Math.min(100, v / goal * 100) + '%';
+    this.el('bValue').style.background = 'var(--green)';
+
     this.badges();
     const hh = Math.floor(Math.max(0, Math.min(0.999, G.acc)) * 24);
     this.el('date').innerHTML = s.d + ' ' + MONTHS[s.m] + ' ' + s.y +
-      ' <span class="hh">' + (hh < 10 ? '0' : '') + hh + ' h</span>';
+      '<span class="hh">' + (hh < 10 ? '0' : '') + hh + ' h · jour ' + s.day + '</span>';
   }
 };

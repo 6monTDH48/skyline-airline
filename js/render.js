@@ -88,8 +88,8 @@ const Map2D = {
 
   /* réglages d'affichage, conservés d'une partie à l'autre */
   opts: {night: true, rivals: true, trails: true, labels: true, grain: true,
-         halos: true, dark: false, borders: true, lakes: true, proj: 'robinson',
-         pauseEvt: true, report: true},
+         halos: true, dark: true, borders: true, lakes: true, proj: 'robinson',
+         pauseEvt: true, report: true, cards: false, dockw: 404},
 
   /* --------------------------------- palettes -------------------------- */
   PAL: {
@@ -119,47 +119,65 @@ const Map2D = {
       grain:0.38, vignette:'rgba(60,45,20,', vignetteA:0.12,
       scale:'rgba(70,60,40,.55)', scaleTxt:'rgba(70,60,40,.75)'
     },
+    /* Carte du centre de contrôle. Deux principes : l'océan est le même vide
+       que le fond de l'application, la terre est la même ardoise que les
+       panneaux — la carte et l'interface sont taillées dans la matière.
+       Le cyan de sélection et l'or des hubs ne se disputent plus : le cyan
+       désigne ce qu'on a désigné, l'or ce qu'on possède. */
     sombre: {
-      bg:'#080d12',
-      sea1:'#101d28', sea2:'#0c1720', sea3:'#081119',
-      land1:'#26333d', land2:'#1c2730',
-      shadow:'rgba(0,0,0,.45)',
-      coastHalo:'rgba(120,170,200,.13)', coast:'rgba(128,168,192,.72)',
-      border:'rgba(120,160,185,.36)', lake:'#12222e', lakeEdge:'rgba(110,150,175,.55)',
-      grat:'rgba(130,175,205,.11)', gratTxt:'rgba(150,185,205,.38)',
-      equator:'rgba(140,180,205,.28)', tropic:'rgba(190,170,110,.20)',
-      frame:'rgba(140,175,200,.45)',
-      night:'2,6,14', dawn:'rgba(240,175,95,.45)', dawnGlow:'rgba(235,160,70,.55)',
-      routeOk:'#4f9ad6', routeIdle:'#54636e',
-      routeSat:'#e8524a', routeDef:'#a284d0', routeLow:'#3f6f92',
-      flowOk:'#b6e2ff', flowSat:'#ffd0c4', flowDef:'#e0cbff', flowLow:'#9fc6e2',
-      selGlow:'rgba(224,180,70,.9)', selLine:'rgba(224,180,70,.5)',
-      trail:'200,225,245', plane:'#cfe2f0', planeShadow:'rgba(0,0,0,.55)',
-      haloHub:'rgba(224,180,70,.30)', halo:'rgba(90,160,215,.26)', haloOut:'rgba(90,160,215,0)',
-      ringSel:'rgba(224,180,70,.85)', ringHov:'rgba(140,190,230,.55)', ringHub:'rgba(224,180,70,.85)',
-      dot:'#6d7d89', dotOwn:'#4f9ad6', dotHub:'#e0b13c',
-      dotEdge:'rgba(18,26,34,.9)', dotGloss:'rgba(255,255,255,.35)',
-      dotShadow:'rgba(0,0,0,.55)',
-      label:'#9fb0bc', labelOwn:'#a9d2ef', labelHub:'#e6c273', labelHalo:'rgba(10,17,24,.9)',
-      link:'rgba(224,180,70,.9)', linkRing:'rgba(224,180,70,.7)',
-      grain:0.16, vignette:'rgba(0,0,0,', vignetteA:0.4,
-      scale:'rgba(170,195,212,.5)', scaleTxt:'rgba(170,195,212,.7)'
+      bg:'#05080c',
+      sea1:'#0b131b', sea2:'#080e15', sea3:'#05090e',
+      land1:'#2a3746', land2:'#1d2733',
+      shadow:'rgba(0,0,0,.55)',
+      coastHalo:'rgba(56,200,226,.10)', coast:'rgba(132,180,206,.78)',
+      border:'rgba(112,152,180,.30)', lake:'#0a121a', lakeEdge:'rgba(100,145,172,.48)',
+      grat:'rgba(120,170,200,.085)', gratTxt:'rgba(140,180,205,.34)',
+      equator:'rgba(130,175,202,.24)', tropic:'rgba(190,170,110,.16)',
+      frame:'rgba(130,170,196,.40)',
+      night:'1,4,10', dawn:'rgba(240,175,95,.42)', dawnGlow:'rgba(235,160,70,.52)',
+      routeOk:'#4f9ad6', routeIdle:'#5d6b77',
+      routeSat:'#e8524a', routeDef:'#a284d0', routeLow:'#5688ad',
+      flowOk:'#b6e2ff', flowSat:'#ffd0c4', flowDef:'#e0cbff', flowLow:'#a8cee6',
+      selGlow:'rgba(56,200,226,.85)', selLine:'rgba(56,200,226,.45)',
+      trail:'190,220,240', plane:'#d4e6f2', planeShadow:'rgba(0,0,0,.6)',
+      haloHub:'rgba(224,177,60,.28)', halo:'rgba(64,170,212,.24)', haloOut:'rgba(64,170,212,0)',
+      ringSel:'rgba(56,200,226,.9)', ringHov:'rgba(130,190,225,.5)', ringHub:'rgba(224,177,60,.85)',
+      dot:'#66757f', dotOwn:'#4f9ad6', dotHub:'#e0b13c',
+      dotEdge:'rgba(8,13,19,.92)', dotGloss:'rgba(255,255,255,.22)',
+      dotShadow:'rgba(0,0,0,.6)',
+      label:'#93a5b1', labelOwn:'#a9d2ef', labelHub:'#e6c273', labelHalo:'rgba(5,9,14,.92)',
+      link:'rgba(56,200,226,.9)', linkRing:'rgba(56,200,226,.65)',
+      grain:0.10, vignette:'rgba(0,0,0,', vignetteA:0.45,
+      scale:'rgba(150,180,200,.45)', scaleTxt:'rgba(150,180,200,.68)'
     }
   },
   pal() { return this.PAL[this.opts.dark ? 'sombre' : 'clair']; },
   P() { return PROJECTIONS[this.opts.proj] || PROJECTIONS.plate; },
 
+  /* Les réglages d'affichage sont versionnés. Avant la refonte, le thème
+     sombre était une option décochée par défaut : un `dark:false` enregistré
+     à cette époque veut dire « jamais touché », pas « je préfère le papier ».
+     On ne le reprend donc pas, et la version 2 fait foi ensuite. */
+  OPTS_V: 2,
+
   loadOpts() {
     try {
       const o = JSON.parse(localStorage.getItem('skyline.opts') || '{}');
+      const old = o.v !== this.OPTS_V;
       Object.keys(this.opts).forEach(k => {
+        if (old && k === 'dark') return;
         if (typeof this.opts[k] === 'boolean' && typeof o[k] === 'boolean') this.opts[k] = o[k];
       });
       if (PROJECTIONS[o.proj]) this.opts.proj = o.proj;
+      // largeur du volet : bornée, sinon une valeur aberrante rendrait la carte inutilisable
+      if (typeof o.dockw === 'number') this.opts.dockw = Math.max(360, Math.min(760, o.dockw));
     } catch (e) {}
   },
   saveOpts() {
-    try { localStorage.setItem('skyline.opts', JSON.stringify(this.opts)); } catch (e) {}
+    try {
+      localStorage.setItem('skyline.opts',
+        JSON.stringify(Object.assign({v: this.OPTS_V}, this.opts)));
+    } catch (e) {}
   },
 
   init(canvas) {
@@ -1010,7 +1028,7 @@ const Map2D = {
       let placed = null;
       for (const [bx, by] of cand) {
         const box = [bx - 1, by - hTxt / 2, bx + wTxt + 1, by + hTxt / 2];
-        if (box[2] < 0 || box[0] > this.w || box[3] < 60 || box[1] > this.h - 18) continue;
+        if (box[2] < 0 || box[0] > this.w || box[3] < 76 || box[1] > this.h - 18) continue;
         if (!hit(box)) { placed = [bx, by, box]; break; }
       }
       if (!placed) return;                       // rien de libre : on n'affiche pas
