@@ -56,16 +56,102 @@ tarifs sans surveiller les comptes.
 
 ## Prise en main
 
-1. **Cliquez une ville** sur la carte → achetez un **créneau** (il en faut un par avion et par escale).
-2. **« Ouvrir une ligne »** puis cliquez la ville de destination.
-3. Achetez un avion dans **Constructeurs** et affectez-le à la ligne.
-4. Réglez le **tarif** et la **fréquence** dans la fiche de ligne.
+1. **Ouvrez une ligne** — touche `N`, bouton du panneau Réseau, ou depuis la fiche d'une ville.
+2. L'**assistant** chiffre tout : créneaux à acheter, appareil conseillé, résultat attendu.
+3. Un seul bouton achète les créneaux et l'avion, ouvre la ligne, l'affecte et la règle.
+4. Ajustez ensuite le **tarif** et la **fréquence** dans la fiche de ligne.
 5. Les comptes tombent en fin de mois.
 
+## L'assistant de ligne
+
+Ouvrir une ligne, c'est en réalité trois achats et deux réglages. L'assistant les rassemble
+dans une seule vue, et ne dépense rien avant que vous ne validiez :
+
+| Ce qu'il montre | Détail |
+|---|---|
+| Les deux escales | choisies au clic sur la carte, par la recherche, ou dans la liste des marchés porteurs |
+| Ce que pèse la liaison | distance, demande quotidienne, compagnies déjà présentes et leurs fréquences |
+| Quel avion y mettre | tout le catalogue capable de tenir la distance, **classé par retour sur investissement**, chacun avec le résultat quotidien qu'il dégagerait une fois bien réglé |
+| Le devis | créneaux à acheter escale par escale (ceux que vous détenez déjà sont déduits), appareils à commander (ceux qui dorment en flotte sont repris), total et trésorerie restante |
+| Le résultat attendu | résultat quotidien net, passagers, remplissage, tarif et fréquence qui seront appliqués, délai de remboursement |
+
+Le classement suit le retour sur investissement plutôt que le résultat brut : un gros porteur
+gagne toujours davantage en valeur absolue, mais immobilise un capital que la trésorerie n'a
+pas. Sur Paris–Londres, un A220 se rembourse en 600 jours quand un 787 en demande 1 300.
+
+Si la liaison dépasse l'autonomie de tout le catalogue — Paris–Sydney fait 16 944 km pour
+16 000 km au mieux — l'assistant propose les escales qui la coupent en deux vols, en
+préférant vos hubs et les aéroports où vous détenez déjà des créneaux.
+
+Le flux à la carte reste disponible : « …ou désigner la destination sur la carte » depuis la
+fiche d'une ville, puis un clic sur la ville d'arrivée ouvre l'assistant sur cette paire.
+
 Raccourcis : `Espace` pause · `1` `2` `3` `4` vitesses ×1 ×2 ×4 ×8 · molette pour zoomer ·
-glisser pour déplacer la carte. La **flèche** en haut du volet revient à la vue précédente
+glisser pour déplacer la carte. `/` ou `G` ouvre la **recherche rapide** : une ville par son
+nom, son code IATA ou son pays, une de vos lignes par l'une de ses escales ; Entrée l'ouvre
+et l'amène au centre de la carte. Une lettre par panneau : `A` alertes, `R` réseau,
+`F` flotte, `C` constructeurs, `E` finances, `S` statistiques, `K` concurrence,
+`O` objectifs, `J` journal, `H` aide, `N` ouvrir une ligne. La **flèche** en haut du volet revient à la vue précédente
 (le panneau Réseau après avoir ouvert une ligne, par exemple) ; `Échap` fait de même, puis
 referme le volet.
+
+## Savoir quoi faire ensuite
+
+Le panneau **Alertes**, en tête de la barre d'outils, rassemble tout ce qui appelle une
+décision, du plus urgent au plus accessoire — trésorerie à découvert, appareils cloués au
+sol ou sans affectation, lignes sans avion, saturées, déficitaires ou trop vides, créneaux
+payés et jamais utilisés, réglages qui laissent de l'argent sur la table. Chaque point
+porte le bouton qui le règle : réviser tel appareil, ouvrir telle fiche, appliquer le
+tarif conseillé. Une pastille sur les boutons Réseau, Flotte et Finances indique d'où
+vient le problème et sa gravité.
+
+Chaque fiche de ligne s'ouvre sur un **conseil** : le levier le plus rentable ici, chiffré
+par une simulation à blanc de la journée d'exploitation — « à 92 % du prix de référence,
+le résultat gagnerait 14 k€ par jour ». Le bouton **Conseillé** applique le tarif optimal,
+comme **Conseillée** le fait pour la fréquence.
+
+## La partie guidée
+
+Une nouvelle partie s'ouvre sur une proposition : **huit étapes** pour ouvrir sa première
+ligne, lire ses comptes et savoir où regarder ensuite. Le guide ne joue pas à votre place et
+ne bloque rien — il dit quoi faire, entoure l'élément à cliquer, et passe à la suite dès que
+c'est fait. On le refuse d'un clic, on l'abandonne à tout moment, on le relance depuis le
+panneau **Aide**. Une partie sauvegardée en cours de guide le reprend où il en était.
+
+## Paliers de compagnie
+
+Entre la première ligne et la première place mondiale il se passe des années. Sept paliers
+nommés jalonnent le chemin :
+
+| Palier | Ce qu'il demande |
+|---|---|
+| Compagnie locale | une ligne en service, un appareil en ligne |
+| Compagnie régionale | 4 lignes, 4 appareils, réputation 60 |
+| Transporteur national | 9 lignes, 2 hubs, 10 appareils |
+| Compagnie continentale | 3 régions, 18 appareils, 400 M€ de valeur |
+| Compagnie intercontinentale | 5 régions, 3 hubs, 28 appareils |
+| Grand réseau mondial | les 7 régions, 1 Md€ de valeur, 25 000 passagers/jour |
+| Première compagnie mondiale | plus aucun concurrent devant vous |
+
+Ils ne rapportent rien : ils nomment où vous en êtes et disent ce qui manque pour le suivant,
+condition par condition, dans le panneau **Objectifs**. Un palier franchi est annoncé et noté
+au journal.
+
+## Le fil de la partie
+
+À chaque clôture, un **bilan mensuel** met la partie en pause : le résultat et son écart avec
+le mois précédent, recettes, coûts, trésorerie, passagers, valeur, réputation et part de
+marché ; les lignes qui ont porté le mois et celles qui ont coûté, avec leur cumul mensuel ;
+les événements en cours ; les nouvelles marquantes ; et le classement mondial, vous compris.
+
+Une nouvelle qui appelle une décision — crise du kérosène, appareil cloué au sol, découvert —
+arrête également la partie et s'affiche en clair, avec un raccourci vers les alertes. Les deux
+comportements se règlent dans **Affichage → Déroulement**, et le bilan se coupe aussi d'une
+case dans sa propre fenêtre, au moment où il lasse ; sans eux, le jeu se contente de
+ralentir à ×2 pour que la nouvelle reste lisible.
+
+Le **journal de bord** (touche `J`) garde tout le fil de la partie, groupé par date de jeu et
+filtrable par rubrique : réseau, flotte, finances, concurrence, événements.
 
 ## Les trois leviers qui comptent
 
@@ -76,8 +162,9 @@ referme le volet.
 | **Choix de l'appareil** | Un A220 bien calibré rapporte 67 k€/jour sur Paris–Londres, un A320 surdimensionné seulement 25 k€ |
 | **Nombre d'appareils** | Rien ne limite le nombre d'avions sur une même ligne : chacun ajoute ses rotations. Il faut un créneau libre à chaque escale, par appareil |
 
-Le bouton **Conseillée** de la fiche de ligne calcule la fréquence qui maximise le résultat,
-compte tenu de la demande, de la concurrence et de tous les coûts.
+Les boutons **Conseillée** et **Conseillé** de la fiche de ligne calculent la fréquence et le
+tarif qui maximisent le résultat, compte tenu de la demande, de la concurrence et de tous
+les coûts.
 
 ## Ce que simule le jeu
 
@@ -109,6 +196,52 @@ Chaque ligne prend la couleur de son état, réévalué chaque jour :
 Le panneau **Réseau** affiche les lignes sous leur **nom complet** (« Paris ↔ Londres »),
 avec le code IATA et la distance en dessous, une étiquette d'état et une alerte en tête
 quand des lignes saturent. Survoler une ligne du tableau la met en avant sur la carte.
+
+## Agir sur plusieurs éléments à la fois
+
+Les tableaux du panneau **Réseau** et du panneau **Flotte** se cochent, et une barre d'actions
+apparaît en tête dès qu'une case est cochée :
+
+| Sur les lignes | Sur les appareils |
+|---|---|
+| tarif conseillé · fréquence conseillée | envoyer en révision |
+| tarif +5 % · tarif −5 % | retirer de leur ligne |
+| fermer | vendre |
+
+La case du haut coche tout. Chaque action dit ensuite ce qui a réellement abouti — une révision
+peut manquer de trésorerie, une ligne peut n'avoir aucun appareil — plutôt que de laisser croire
+que tout est passé. Fermer et vendre demandent confirmation et annoncent le montant en jeu.
+
+Une alerte qui vise plusieurs appareils — « 3 appareils usés », « 2 appareils sans ligne » — les
+coche d'avance : le geste à faire est alors à un clic.
+
+Le panneau **Flotte** est une liste compacte : immatriculation, état, usure, affectation. Le
+détail d'un appareil — cabine, rétrofits, affectation, revente — s'ouvre sur sa fiche, à un clic
+sur sa ligne.
+
+## Quand un aéroport est saturé
+
+Les grandes plateformes finissent par n'avoir plus un créneau à vendre. Ce n'est plus une
+impasse : la fiche de l'escale ouvre trois portes, de la moins chère à la plus chère.
+
+| Voie | Prix | Délai | Ce qu'elle coûte |
+|---|---|---|---|
+| **Horaires creux** | moitié prix | immédiat | jusqu'à 45 % d'attractivité en moins sur les vols qui s'en servent |
+| **Agrandissement** | 55 M€ + 240 M€ × taille | 8 à 18 mois | les créneaux livrés profitent aussi aux concurrents |
+| **Rachat à une compagnie** | 3,5× le prix normal et plus | immédiat | réputation exigée, et la compagnie qui cède allège sa desserte |
+
+Les horaires creux sont une réserve que personne ne se dispute — 40 % de la capacité — parce que
+personne n'en veut vraiment : un départ à six heures du matin remplit moins bien. **Vos bons
+créneaux servent d'abord** : un horaire creux acheté d'avance ne pénalise rien tant qu'aucun
+appareil supplémentaire ne s'en sert. À Heathrow, un créneau normal coûte environ 6 M€, un
+horaire creux 3 M€, un rachat 26 M€, et l'agrandissement 348 M€ pour neuf créneaux en dix-huit
+mois.
+
+Le rachat n'est pas une écriture comptable : la compagnie qui cède réduit vraiment sa fréquence
+sur sa liaison la moins chargée depuis cet aéroport, et abandonne la ligne si elle tombe trop bas.
+C'est ainsi que se gagnent Heathrow ou JFK, comme dans la réalité.
+
+L'assistant de ligne renvoie directement vers ces trois voies quand une escale bloque le devis.
 
 ## Améliorations et programmes
 
@@ -198,6 +331,7 @@ js/engine.js        moteur de simulation (demande, exploitation, IA, finances)
 js/render.js        rendu de la carte : projections, couches, étiquettes
 js/ui.js            panneaux et fiches
 js/ui-stats.js      panneau Statistiques et fiche statistique d'escale
+js/guide.js         la partie guidée : huit étapes, surbrillance, progression
 js/main.js          boucle de jeu, entrées, sauvegarde
 ```
 

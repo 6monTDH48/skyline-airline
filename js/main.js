@@ -68,12 +68,13 @@ function startScreen() {
     G.newGame(name, home, chosen);
     UI.closeModal();
     Map2D.focus(home, 7);
-    UI.topbar(); UI.open('help');
+    UI.topbar();
     SPEED = 1; setSpeed(1);
+    GUIDE.offer();
   };
   const bl = document.getElementById('btnLoad');
   if (bl) bl.onclick = () => {
-    if (G.load()) { UI.closeModal(); Map2D.focus(G.s.home, 6); UI.topbar(); setSpeed(0); }
+    if (G.load()) { UI.closeModal(); Map2D.focus(G.s.home, 6); UI.topbar(); setSpeed(0); GUIDE.render(); }
     else UI.toast('Sauvegarde illisible', 'Impossible de charger la partie.', 'bad');
   };
 }
@@ -99,6 +100,8 @@ function loop(t) {
   lastT = t;
   if (G.s && !G.s.dead) G.step(dt, SPEED);
   Map2D.draw(dt);
+
+  if (typeof GUIDE !== 'undefined' && G.s) GUIDE.check();
 
   uiAcc += dt;
   if (uiAcc > 0.9) {
@@ -168,8 +171,10 @@ function initInput() {
       const free = slotsFree(c.code), own = G.s.slots[c.code] || 0;
       tip.innerHTML = '<b>' + c.name + '</b> · ' + c.country +
         '<br>Marché ' + Math.round(c.size * 100) + ' · créneaux ' + own + ' à vous, ' + free + ' libres' +
-        (Map2D.linkFrom && Map2D.linkFrom !== c.code
-          ? '<br>Cliquez pour relier depuis ' + CITY_BY_CODE[Map2D.linkFrom].name : '');
+        (Map2D.wizPick
+          ? '<br>Cliquez pour en faire la ville de ' + (Map2D.wizPick === 'from' ? 'départ' : 'destination')
+          : (Map2D.linkFrom && Map2D.linkFrom !== c.code
+            ? '<br>Cliquez pour relier depuis ' + CITY_BY_CODE[Map2D.linkFrom].name : ''));
       tip.style.display = 'block';
       tip.style.left = (e.clientX + 14) + 'px';
       tip.style.top = (e.clientY + 14) + 'px';
@@ -180,13 +185,23 @@ function initInput() {
     if (!G.s) return;
     const r = document.getElementById('map').getBoundingClientRect();
     const c = Map2D.cityAt(e.clientX - r.left, e.clientY - r.top);
-    if (!c) { if (Map2D.linkFrom) cancelLink(); return; }
+    if (!c) { if (Map2D.linkFrom || Map2D.wizPick) cancelLink(); return; }
+    // choix d'une escale demandé par l'assistant
+    if (Map2D.wizPick) {
+      const role = Map2D.wizPick;
+      cancelLink();
+      UI.wiz.keep = true;
+      UI.newRoute(role === 'from' ? c.code : undefined, role === 'to' ? c.code : undefined);
+      if (UI.wiz.from && UI.wiz.to) Map2D.frame(UI.wiz.from, UI.wiz.to);
+      return;
+    }
+    // « ouvrir une ligne depuis X » puis clic sur la destination : l'assistant
+    // reprend la paire et chiffre tout avant le moindre achat
     if (Map2D.linkFrom && Map2D.linkFrom !== c.code) {
       const from = Map2D.linkFrom;
       cancelLink();
-      const res = G.createRoute(from, c.code);
-      if (!res.ok) UI.toast('Impossible', res.why, 'bad');
-      else { UI.open('route', res.route.id); Map2D.frame(from, c.code); }
+      UI.newRoute(from, c.code);
+      Map2D.frame(from, c.code);
       return;
     }
     Map2D.selCity = c.code;
@@ -224,6 +239,10 @@ function initInput() {
     b.onclick = () => setSpeed(+b.dataset.sp));
   // options d'affichage
   const optPanel = document.getElementById('opts'), optBtn = document.getElementById('optBtn');
+  // un réglage peut aussi être changé ailleurs qu'ici — le bilan mensuel se
+  // coupe depuis sa propre fenêtre : les cases doivent suivre
+  window.syncOptBoxes = () => document.querySelectorAll('#opts input[data-opt]')
+    .forEach(cb => { cb.checked = Map2D.opts[cb.dataset.opt]; });
   document.querySelectorAll('#opts input[data-opt]').forEach(cb => {
     cb.checked = Map2D.opts[cb.dataset.opt];
     cb.onchange = () => {
@@ -263,6 +282,27 @@ function initInput() {
   document.getElementById('zOut').onclick = () => { Map2D.camT.z /= 1.4; };
   document.getElementById('zFit').onclick = () => Map2D.fit();
 
+  // barre de recherche rapide
+  const findIn = document.getElementById('findIn'), findList = document.getElementById('findList');
+  let findSel = 0;
+  const paintSel = () => findList.querySelectorAll('.fr').forEach((el, i) =>
+    el.classList.toggle('on', i === findSel));
+  findIn.addEventListener('input', () => { findSel = 0; UI.searchFilter(findIn.value); });
+  findIn.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { UI.searchClose(); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); findSel = Math.min(UI.found.length - 1, findSel + 1); paintSel(); }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); findSel = Math.max(0, findSel - 1); paintSel(); }
+    if (e.key === 'Enter')     { e.preventDefault(); UI.searchPick(findSel); }
+  });
+  findList.addEventListener('click', e => {
+    const el = e.target.closest('.fr[data-i]');
+    if (el) UI.searchPick(parseInt(el.dataset.i, 10));
+  });
+  document.addEventListener('mousedown', e => {
+    const box = document.getElementById('find');
+    if (box.classList.contains('open') && !box.contains(e.target)) UI.searchClose();
+  });
+
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     if (e.code === 'Space') { e.preventDefault(); setSpeed(SPEED > 0 ? 0 : LAST_SPEED); }
@@ -270,9 +310,19 @@ function initInput() {
     if (e.key === '2') setSpeed(2);
     if (e.key === '3') setSpeed(4);
     if (e.key === '4') setSpeed(8);
+    if (e.key.toLowerCase() === 'n' && !e.ctrlKey && !e.altKey && !e.metaKey) UI.newRoute();
+    const keys = {a:'alerts', r:'network', f:'fleet', c:'market', j:'log',
+                  e:'finance', s:'stats', k:'rivals', o:'goals', h:'help'};
+    const p = keys[e.key.toLowerCase()];
+    if (p && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      if (UI.panel === p) UI.close(); else UI.open(p, undefined, {root: true});
+    }
+    if (e.key === '/' || (e.key.toLowerCase() === 'g' && !e.ctrlKey)) { e.preventDefault(); UI.search(); }
     if (e.key === 'Escape') {
-      if (Map2D.linkFrom) cancelLink();
-      else if (document.getElementById('modal').classList.contains('open')) { /* modale bloquante */ }
+      if (Map2D.linkFrom || Map2D.wizPick) cancelLink();
+      else if (document.getElementById('modal').classList.contains('open')) {
+        if (UI.modalClosable) UI.closeModal();      // sinon la modale attend un choix
+      }
       else if (!UI.back()) UI.close();
     }
   });
@@ -281,6 +331,7 @@ function initInput() {
 
 function cancelLink() {
   Map2D.linkFrom = null;
+  Map2D.wizPick = null;
   document.getElementById('map').classList.remove('linking');
 }
 
@@ -291,6 +342,22 @@ function act(a, v) {
     case 'focus':   Map2D.focus(v, Math.max(Map2D.cam.z, 8)); break;
     case 'city':    Map2D.selCity = v; UI.open('city', v); break;
     case 'route':   UI.open('route', parseInt(v, 10)); break;
+    case 'buyoffpeak': {
+      const r = G.buyOffPeak(v);
+      if (!r.ok) UI.toast('Impossible', r.why, 'bad'); else UI.render();
+      break;
+    }
+    case 'buyfrom': {
+      const p = v.split('::');
+      const r = G.buySlotFrom(p[0], p[1]);
+      if (!r.ok) UI.toast('Négociation rompue', r.why, 'bad'); else UI.render();
+      break;
+    }
+    case 'expand': {
+      const r = G.expandAirport(v);
+      if (!r.ok) UI.toast('Impossible', r.why, 'bad'); else UI.render();
+      break;
+    }
     case 'buyslot': {
       const r = G.buySlot(v);
       if (!r.ok) UI.toast('Impossible', r.why, 'bad'); else UI.render();
@@ -324,6 +391,62 @@ function act(a, v) {
       UI.render();
       break;
     }
+    case 'panel':   UI.open(v, undefined, {root: true}); break;
+    case 'guide':   UI.close(); GUIDE.start(); break;
+    case 'logfilter': UI.logFilter = v; UI.render(); break;
+    case 'newroute': UI.newRoute(v || undefined, v ? null : undefined); break;
+    case 'wizset':  UI.wizSet(v); break;
+    case 'wiztype': UI.wizSet('type', v); break;
+    case 'wizto':   UI.wiz.to = v; UI.render(); Map2D.frame(UI.wiz.from, v); break;
+    case 'wizpair': { const p = v.split(':'); UI.newRoute(p[0], p[1]); Map2D.frame(p[0], p[1]); break; }
+    case 'wizpick': {
+      // on repasse en mode « cliquez une ville » ; le clic revient à l'assistant
+      Map2D.linkFrom = null;
+      Map2D.wizPick = v;
+      document.getElementById('map').classList.add('linking');
+      UI.toast('Choisissez une ville', 'Cliquez la ville de ' +
+        (v === 'from' ? 'départ' : 'destination') + ' sur la carte (Échap pour annuler).');
+      break;
+    }
+    case 'wizgo': {
+      const w = UI.wiz;
+      const plan = G.planRoute(w.from, w.to, {typeId: w.typeId, count: w.count});
+      const r = G.openRoute(plan);
+      if (!r.ok) UI.toast('Impossible', r.why, 'bad');
+      else {
+        Map2D.frame(w.from, w.to);
+        UI.wiz = {count: 1, from: w.from, typeId: null, cargo: w.cargo, sort: w.sort};
+        UI.open('route', r.route.id, {root: true});
+      }
+      break;
+    }
+    case 'optprice': {
+      const r = G.s.routes.find(x => x.id === parseInt(v, 10));
+      if (r) {
+        const m = G.suggestPrice(r);
+        if (m) {
+          r.priceMult = m / 100;
+          UI.toast('Tarif ajusté', m + ' % du prix de référence, soit ' +
+            Math.round(baseDemand(r.a, r.b).price * r.priceMult) + ' € en éco.');
+        }
+        UI.render();
+      }
+      break;
+    }
+    case 'aircraft': UI.open('aircraft', parseInt(v, 10)); break;
+    case 'selroute': UI.selToggle('route', parseInt(v, 10)); break;
+    case 'selac':    UI.selToggle('ac', parseInt(v, 10)); break;
+    case 'selallroute': UI.selAll('route', G.s.routes.map(r => r.id)); break;
+    case 'selallac':    UI.selAll('ac', G.s.fleet.map(a => a.id)); break;
+    case 'selclear': UI.selClear(v); UI.render(); break;
+    // une alerte qui vise plusieurs appareils les coche d'avance : la barre
+    // d'actions groupées est alors à un clic du geste à faire
+    case 'fleetsel':
+      UI.selClear();
+      UI.sel.ac = v.split(',').map(x => parseInt(x, 10));
+      UI.open('fleet', undefined, {root: true});
+      break;
+    case 'bulk':    bulk(v); break;
     case 'statper': UI.statsPeriod = v; UI.render(); break;
     case 'mod': {
       const [acId, modId] = v.split(':');
@@ -381,9 +504,115 @@ function act(a, v) {
   }
 }
 
+/* ========================== actions groupées ============================= */
+/* Le même geste appliqué à toute une sélection. On compte ce qui a réellement
+   abouti — une révision peut manquer de trésorerie, une ligne peut n'avoir
+   aucun appareil — et on le dit, plutôt que de laisser croire que tout est
+   passé. Les opérations qui détruisent demandent confirmation. */
+function bulk(op) {
+  const s = G.s;
+  const routes = UI.sel.route.map(id => s.routes.find(r => r.id === id)).filter(Boolean);
+  const acs = UI.sel.ac.map(id => s.fleet.find(a => a.id === id)).filter(Boolean);
+  let done = 0, skipped = 0, why = '';
+
+  const say = (title, text) => { UI.toast(title, text, done ? 'good' : 'bad'); UI.render(); };
+
+  switch (op) {
+    case 'r-price':
+      routes.forEach(r => {
+        const m = G.suggestPrice(r);
+        if (m) { r.priceMult = m / 100; done++; } else skipped++;
+      });
+      return say('Tarifs ajustés', done + ' ligne(s) au tarif conseillé' +
+        (skipped ? ', ' + skipped + ' sans appareil en état de voler.' : '.'));
+
+    case 'r-freq':
+      routes.forEach(r => {
+        const f = G.suggestFreq(r);
+        if (r.ac.length) { r.freqCap = f; done++; } else skipped++;
+      });
+      return say('Fréquences ajustées', done + ' ligne(s) à la fréquence conseillée' +
+        (skipped ? ', ' + skipped + ' sans appareil.' : '.'));
+
+    case 'r-up':
+    case 'r-down': {
+      const d = op === 'r-up' ? 0.05 : -0.05;
+      routes.forEach(r => {
+        const v = Math.max(0.60, Math.min(1.70, r.priceMult + d));
+        if (v !== r.priceMult) { r.priceMult = v; done++; } else skipped++;
+      });
+      return say('Tarifs modifiés', done + ' ligne(s) ' + (d > 0 ? 'augmentées' : 'baissées') +
+        ' de 5 points' + (skipped ? ', ' + skipped + ' déjà au bout de la plage.' : '.'));
+    }
+
+    case 'r-close':
+      return confirmBulk('Fermer ' + routes.length + ' ligne(s) ?',
+        'Leurs appareils reviennent au sol, et les créneaux restent à vous. ' +
+        'Les lignes, elles, sont perdues : il faudra les rouvrir.',
+        () => {
+          routes.forEach(r => { G.closeRoute(r.id); done++; });
+          UI.selClear('route');
+          say('Lignes fermées', done + ' ligne(s) fermée(s).');
+        });
+
+    case 'ac-maint':
+      acs.forEach(a => {
+        const r = G.sendMaint(a.id);
+        if (r.ok) done++; else { skipped++; why = r.why; }
+      });
+      return say('Appareils en révision', done + ' appareil(s) à l’atelier' +
+        (skipped ? ', ' + skipped + ' non — ' + why : '.'));
+
+    case 'ac-unassign':
+      acs.forEach(a => { if (a.routeId) { G.unassign(a.id); done++; } else skipped++; });
+      return say('Appareils retirés', done + ' appareil(s) retiré(s) de leur ligne' +
+        (skipped ? ', ' + skipped + ' étaient déjà au sol.' : '.'));
+
+    case 'ac-sell': {
+      const total = acs.reduce((t, a) => t + acValue(a) * 0.88, 0);
+      return confirmBulk('Vendre ' + acs.length + ' appareil(s) ?',
+        'Vous en tirez ' + money(total) + ', et ils quittent définitivement la flotte. ' +
+        'Les lignes qu’ils desservaient se retrouveront sans avion.',
+        () => {
+          acs.forEach(a => { G.sellAircraft(a.id); done++; });
+          UI.selClear('ac');
+          say('Appareils vendus', done + ' appareil(s) cédé(s) pour ' + money(total) + '.');
+        });
+    }
+  }
+}
+
+/* Une confirmation pour les gestes qu'on ne rattrape pas. */
+function confirmBulk(title, text, go) {
+  window.bulkGo = go;
+  UI.modal('<div class="mh"><h2>' + title + '</h2><p>' + text + '</p></div>' +
+    '<div class="mf"><button class="btn gh" onclick="UI.closeModal()">Annuler</button>' +
+    '<button class="btn warn" onclick="UI.closeModal();bulkGo()">Confirmer</button></div>', true);
+}
+
 /* =============================== événements ============================== */
 G.on('log', l => UI.toast(l.t, l.x, l.k));
-G.on('event', e => { if (SPEED > 2) setSpeed(2); });
+
+/* Une nouvelle qui appelle une décision arrête la partie, si le joueur l'a
+   demandé ; sinon on se contente de ralentir pour qu'elle soit lisible. */
+function attention(title, text, kind) {
+  if (Map2D.opts.pauseEvt) {
+    setSpeed(0);
+    UI.modal('<div class="mh"><h2>' + title + '</h2><p>' + text + '</p></div>' +
+      '<div class="mb"><div class="mini">La partie est en pause. Vous pouvez consulter vos panneaux ' +
+      'avant de reprendre : le volet reste accessible une fois cette fenêtre fermée.</div></div>' +
+      '<div class="mf"><button class="btn gh" onclick="UI.closeModal();UI.open(&quot;alerts&quot;,undefined,{root:true})">' +
+      'Voir les alertes</button>' +
+      '<button class="btn" onclick="UI.closeModal();setSpeed(LAST_SPEED)">Reprendre</button></div>', true);
+  } else if (SPEED > 2) setSpeed(2);
+}
+G.on('event', e => attention(e.title, e.text + ' L’effet dure ' + e.days + ' jours.', 'evt'));
+G.on('attention', l => attention(l.t, l.x, l.k));
+G.on('report', rep => {
+  if (!Map2D.opts.report) return;
+  setSpeed(0);
+  UI.report(rep);
+});
 G.on('victory', d => {
   setSpeed(0);
   UI.modal('<div class="mh"><h2>Vous avez gagné</h2><p>' + G.s.airline.name +
@@ -406,6 +635,9 @@ G.on('gameover', () => {
     '<div class="stat">Flotte<b>' + G.s.fleet.length + '</b></div>' +
     '<div class="stat">Passagers<b>' + num(G.s.totals.pax) + '</b></div></div></div>' +
     '<div class="mf"><button class="btn" onclick="act(\'restart\')">Rejouer</button></div>');
+});
+G.on('tier', t => {
+  UI.toast('Nouveau rang', t.name + ' — ' + t.desc, 'good');
 });
 G.on('month', () => {
   const d = document.getElementById('date');
